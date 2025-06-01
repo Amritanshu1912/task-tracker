@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 E-commerce Platform - Phase 2 Task Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #e2e8f0;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #1e1e2e;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            border: 1px solid #2d2d3d;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            padding: 25px;
+            background: #252538;
+            border-bottom: 1px solid #3d3d4d;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 15px;
+            border-radius: 12px;
+            background: #2d2d3d;
+            margin: 0 5px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.2);
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .completed .stat-number {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .total .stat-number {
+            background: linear-gradient(135deg, #64748b, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .progress-bar-container {
+            grid-column: 1 / -1;
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #3d3d4d;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 8px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #34d399, #6366f1);
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0%;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.95rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .content {
+            padding: 30px;
+            background: #1e1e2e;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            border: 1px solid #3d3d4d;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #252538;
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            border-color: #6366f1;
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.1);
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #2d2d3d, #3d3d4d);
+            padding: 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3d3d4d;
+            transition: all 0.3s ease;
+        }
+
+        .section-header:hover {
+            background: linear-gradient(135deg, #3d3d4d, #4d4d5d);
+        }
+
+        .section-title {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toggle-icon {
+            font-size: 1.4rem;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #6366f1;
+        }
+
+        .section.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .section-content {
+            padding: 25px;
+            display: block;
+            background: #1e1e2e;
+        }
+
+        .section.collapsed .section-content {
+            display: none;
+        }
+
+        .task-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .task-item {
+            margin-bottom: 16px;
+            border: 1px solid #3d3d4d;
+            border-radius: 12px;
+            background: #252538;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .task-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .task-item:hover {
+            background: #2d2d3d;
+            border-color: #6366f1;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+        }
+
+        .task-item:hover::before {
+            opacity: 1;
+        }
+
+        .task-item.completed {
+            background: linear-gradient(135deg, #064e3b, #065f46);
+            border-color: #10b981;
+        }
+
+        .task-item.completed::before {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            opacity: 1;
+        }
+
+        .task-item.completed .task-title,
+        .task-item.completed .task-notes {
+            color: #6ee7b7;
+            text-decoration: line-through;
+            opacity: 0.8;
+        }
+
+        .task-item.collapsed .task-content {
+            display: none;
+        }
+
+        .task-item.collapsed .subtasks {
+            display: none;
+        }
+
+        .task-header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+        }
+
+        .task-header .task-toggle-icon {
+            font-size: 0.9rem;
+            color: #6366f1;
+            transition: transform 0.3s ease;
+            margin-right: 5px;
+            width: 16px;
+            text-align: center;
+        }
+
+        .task-item.collapsed .task-toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .task-item:not(.has-subtasks) .task-toggle-icon {
+            visibility: hidden;
+        }
+
+        .task-actions {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .task-item:hover .task-actions {
+            opacity: 1;
+        }
+
+        .task-menu-btn {
+            background: #3d3d4d;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 8px;
+            color: #94a3b8;
+            line-height: 1;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .task-menu-btn:hover {
+            background: #6366f1;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .task-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: #2d2d3d;
+            border: 1px solid #4d4d5d;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            z-index: 100;
+            width: 200px;
+            overflow: hidden;
+        }
+
+        .task-menu.show {
+            display: block;
+            animation: menuSlideIn 0.2s ease;
+        }
+
+        @keyframes menuSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .task-menu button {
+            display: block;
+            width: 100%;
+            padding: 12px 16px;
+            text-align: left;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            transition: background 0.2s ease;
+        }
+
+        .task-menu button:hover {
+            background: #3d3d4d;
+        }
+
+        .task-menu button i {
+            margin-right: 10px;
+            width: 16px;
+            text-align: center;
+            color: #6366f1;
+        }
+
+        .task-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #4d4d5d;
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            background: #2d2d3d;
+        }
+
+        .task-checkbox:hover {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .task-checkbox.checked {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            border-color: #10b981;
+        }
+
+        .task-checkbox.checked::after {
+            content: "✓";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .task-number {
+            font-weight: bold;
+            color: #6366f1;
+            min-width: 60px;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+            background: #3d3d4d;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .task-title {
+            flex: 1;
+            font-weight: 600;
+            color: #f1f5f9;
+            transition: color 0.3s ease;
+            padding: 6px 10px;
+            border-radius: 6px;
+            min-height: 24px;
+            background: transparent;
+            border: 1px solid transparent;
+        }
+
+        .task-title[contenteditable="true"]:focus {
+            outline: none;
+            background: #3d3d4d;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .task-content {
+            display: block;
+        }
+
+        .task-notes {
+            padding: 0 20px 20px 105px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-style: italic;
+            transition: color 0.3s ease;
+            border-radius: 6px;
+            min-height: 20px;
+            white-space: pre-wrap;
+            border: 1px solid transparent;
+        }
+
+        .task-notes[contenteditable="true"]:focus {
+            outline: none;
+            background: #3d3d4d;
+            border-color: #6366f1;
+            padding-left: 16px;
+            margin-left: 89px;
+            font-style: normal;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .subtasks {
+            margin-left: 50px;
+            border-left: 2px solid #4d4d5d;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .subtasks::before {
+            content: '';
+            position: absolute;
+            left: -2px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .subtasks:hover::before {
+            opacity: 0.5;
+        }
+
+        .subtasks > .task-item {
+            margin-bottom: 12px;
+        }
+
+        .main-add-task-btn {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 10px 8px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .main-add-task-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .main-add-task-btn.export {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .main-add-task-btn.export:hover {
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .main-add-task-btn.save {
+            background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+        }
+
+        .main-add-task-btn.save:hover {
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+        }
+
+        .main-add-task-btn.load {
+            background: linear-gradient(135deg, #8b5cf6, #a855f7);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .main-add-task-btn.load:hover {
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+        }
+
+        .task-labels {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+            padding: 0 20px 15px 105px;
+        }
+
+        .label {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .label:hover {
+            transform: scale(1.05);
+        }
+
+        .label.frontend {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+        }
+
+        .label.backend {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+        }
+
+        .label.fullstack {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .label.deferred {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .label.urgent {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .label.design {
+            background: linear-gradient(135deg, #ec4899, #be185d);
+            color: white;
+        }
+
+        .label.testing {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+            color: white;
+        }
+
+        .label.documentation {
+            background: linear-gradient(135deg, #64748b, #475569);
+            color: white;
+        }
+
+        .label-input {
+            background: #3d3d4d;
+            border: 1px solid #4d4d5d;
+            color: #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            width: 200px;
+        }
+
+        .label-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .add-task-btn {
+            background: #3d3d4d;
+            color: #94a3b8;
+            border: 1px solid #4d4d5d;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin: 8px 5px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .add-task-btn:hover {
+            background: #6366f1;
+            color: white;
+            border-color: #6366f1;
+        }
+
+        @media (max-width: 768px) {
+            .stats {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .task-header {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .task-actions {
+                position: relative;
+                opacity: 1;
+                top: auto;
+                right: auto;
+                margin-left: auto;
+            }
+
+            .subtasks {
+                margin-left: 25px;
+                padding-left: 20px;
+            }
+
+            .task-notes,
+            .task-labels {
+                padding-left: 70px;
+            }
+
+            .task-notes[contenteditable="true"]:focus {
+                margin-left: 66px;
+            }
+
+            .header h1 {
+                font-size: 2.2rem;
+            }
+
+            .main-add-task-btn {
+                padding: 12px 20px;
+                font-size: 0.9rem;
+                margin: 8px 4px;
+            }
+        }
+
+        .footer {
+            padding: 30px;
+            text-align: center;
+            background: linear-gradient(135deg, #252538, #2d2d3d);
+            border-top: 1px solid #3d3d4d;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #2d2d3d;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5b5bd6, #7c3aed);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 E-commerce Platform - Phase 2 Task Tracker</h1>
+            <p>✨ Interactive development roadmap for public and admin functionalities</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat completed">
+                <div class="stat-number" id="completed-count">0</div>
+                <div class="stat-label">✅ Completed</div>
+            </div>
+            <div class="stat total">
+                <div class="stat-number" id="total-count">0</div>
+                <div class="stat-label">📋 Total Tasks</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="percentage">0%</div>
+                <div class="stat-label">🎯 Progress</div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="progress-text">Overall Progress</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Public Endpoints Section -->
+            <div class="section" id="public-section">
+                <div class="section-header" onclick="toggleSection('public-section')">
+                    <h2 class="section-title">
+                        <span>🌐</span>
+                        Public (Consumer) Endpoints & Frontend Features
+                    </h2>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content">
+                    <p style="margin-bottom: 25px; color: #94a3b8; font-style: italic; font-size: 1.05rem;">
+                        🛍️ This section details the functionalities accessible to general users, covering product browsing,
+                        cart management, and order viewing.
+                    </p>
+
+                    <button class="add-task-btn" onclick="addNewTaskToSection('public-section')">
+                        <i class="fas fa-plus"></i> Add Task
+                    </button>
+
+                    <ul class="task-list">
+                        <!-- Tasks for Public Section will be populated by JS -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Admin Endpoints Section -->
+            <div class="section" id="admin-section">
+                <div class="section-header" onclick="toggleSection('admin-section')">
+                    <h2 class="section-title">
+                        <span>🛠️</span>
+                        Admin Endpoints & Frontend Features
+                    </h2>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content">
+                    <p style="margin-bottom: 25px; color: #94a3b8; font-style: italic; font-size: 1.05rem;">
+                        ⚙️ This section covers the functionalities for managing products, categories, and orders by
+                        administrators.
+                    </p>
+
+                    <button class="add-task-btn" onclick="addNewTaskToSection('admin-section')">
+                        <i class="fas fa-plus"></i> Add Task
+                    </button>
+
+                    <ul class="task-list">
+                        <!-- Tasks for Admin Section will be populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <button class="main-add-task-btn" onclick="promptNewMainTask()">
+                <i class="fas fa-plus"></i> Add New Main Task
+            </button>
+            <button class="main-add-task-btn export" onclick="exportProgress()">
+                <i class="fas fa-file-export"></i> Export Progress
+            </button>
+            <button class="main-add-task-btn save" onclick="saveProgress()">
+                <i class="fas fa-save"></i> Save Progress
+            </button>
+            <button class="main-add-task-btn load" onclick="loadProgressPrompt()">
+                <i class="fas fa-folder-open"></i> Load Progress
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const initialTasksData = {
+            "public-section": [
+                {
+                    title: "🎨 Core Navigation & UI Polish", notes: "Modern navigation with smooth animations",
+                    labels: ["Frontend", "Design"],
+                    subtasks: [
+                        { title: "📱 Navbar Category Dropdown", notes: "Implemented using useCategories hook.", completed: true, labels: ["Frontend", "Backend"] },
+                        {
+                            title: "🔍 Navbar Search Bar", notes: "Real-time search with debouncing",
+                            labels: ["Frontend"],
+                            subtasks: [
+                                { title: "⚛️ Create SearchBar.tsx component", notes: "Reusable search component", labels: ["Frontend"] },
+                                { title: "🔗 Integrate into Navbar", notes: "Seamless integration", labels: ["Frontend"] },
+                                { title: "🌐 Update URL query for Product Listing Page (PLP) on input", notes: "URL state management", labels: ["Frontend"] }
+                            ]
+                        },
+                        {
+                            title: "👤 User Menu (Navbar)", notes: "Enhanced user experience", labels: ["Frontend"],
+                            subtasks: [
+                                { title: "✨ Improve hover/click dropdown for authenticated users", notes: "Smooth animations" },
+                                { title: "🔗 Add links for Profile, Orders, Wishlist, and Sign Out", notes: "Complete user navigation" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    title: "🛍️ Product Management (Public Read)", notes: "Customer-facing product features",
+                    labels: ["Frontend", "Backend"],
+                    subtasks: [
+                        {
+                            title: "📋 Product Listing Page (/products)", notes: "Connect to backend GET /api/products.", labels: ["Fullstack"],
+                            subtasks: [
+                                { title: "✅ Backend GET /api/products is Implemented", completed: true, labels: ["Backend"] },
+                                { title: "🎨 Frontend is styled, uses dummy data, and is ready for API integration", labels: ["Frontend"] },
+                                {
+                                    title: "🏷️ Category Filter Component", notes: "Advanced filtering", labels: ["Frontend"],
+                                    subtasks: [
+                                        { title: "📊 Sidebar filter powered by useCategories" },
+                                        { title: "🔄 Update URL on selection" }
+                                    ]
+                                },
+                                {
+                                    title: "📈 Sorting Dropdown", notes: "Multiple sort options", labels: ["Frontend"],
+                                    subtasks: [
+                                        { title: "⬇️ Dropdown for sort by: price, popularity, new" },
+                                        { title: "🔄 Triggers URL update & data re-fetch" }
+                                    ]
+                                },
+                                {
+                                    title: "📄 Pagination Controls", notes: "Smooth navigation", labels: ["Frontend"],
+                                    subtasks: [
+                                        { title: "🔘 Enable navigation via buttons" },
+                                        { title: "🔄 Update URL and re-fetch based on page number" }
+                                    ]
+                                },
+                                { title: "✨ Final polish on responsiveness and UI styling", labels: ["Frontend", "Design"] }
+                            ]
+                        },
+                        {
+                            title: "📱 Product Detail Page (/products/[slug])", notes: "Connect to backend GET /api/products/:slug.", labels: ["Fullstack"],
+                            subtasks: [
+                                { title: "✅ Backend GET /api/products/:slug is Implemented", completed: true, labels: ["Backend"] },
+                                { title: "🎨 Frontend is styled, uses dummy data, and is ready for API integration", labels: ["Frontend"] },
+                                {
+                                    title: "🖼️ Image Gallery", notes: "Interactive image viewer", labels: ["Frontend"],
+                                    subtasks: [
+                                        { title: "📸 Main image + thumbnails" },
+                                        { title: "🔍 Click-to-change, optional arrows or zoom" }
+                                    ]
+                                },
+                                {
+                                    title: "🎛️ Variant Selectors", notes: "Dynamic product options", labels: ["Frontend"],
+                                    subtasks: [
+                                        { title: "🔘 Dropdowns/buttons to pick size, color, etc." },
+                                        { title: "💰 Update price, image, stock availability" }
+                                    ]
+                                },
+                                { title: "✨ UI Polish for overall product display", labels: ["Frontend", "Design"] }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "admin-section": [
+                {
+                    title: "🏗️ Foundation", notes: "Core admin infrastructure", completed: true, labels: ["Fullstack"],
+                    subtasks: [
+                        { title: "🏠 /admin (or /admin/index.tsx): Basic structure with AdminLayout and client-side role protection implemented", completed: true },
+                        { title: "📊 Displays placeholder/dummy stats", completed: true },
+                        { title: "🔐 Authentication Middleware: Secure admin endpoints Implemented", completed: true, labels: ["Backend"] }
+                    ]
+                },
+                {
+                    title: "📦 Product Management APIs", notes: "Complete product CRUD operations",
+                    labels: ["Backend", "Frontend"],
+                    subtasks: [
+                        {
+                            title: "📋 List all products", notes: "Admin product overview",
+                            subtasks: [
+                                { title: "🔧 Backend GET /api/admin/products — including disabled (to be implemented)", labels: ["Backend"] },
+                                { title: "🎨 Frontend /admin/products — Manage products: list page, Add/Edit/Delete links", labels: ["Frontend"] }
+                            ]
+                        },
+                        {
+                            title: "➕ Create new product", notes: "Product creation workflow",
+                            subtasks: [
+                                { title: "🔧 Backend POST /api/admin/products (Service function: Create)", labels: ["Backend"] },
+                                { title: "📝 Frontend /admin/products/create — Form for products", labels: ["Frontend"] }
+                            ]
+                        },
+                        {
+                            title: "✏️ Update existing product", notes: "Product editing capabilities",
+                            subtasks: [
+                                { title: "🔧 Backend PUT /api/admin/products/:id — including handling variants, categories via ProductCategory", labels: ["Backend"] },
+                                { title: "📝 Frontend /admin/products/edit/[id] — Form for products", labels: ["Frontend"] }
+                            ]
+                        },
+                        { title: "🗑️ Delete product", notes: "Backend DELETE /api/admin/products/:id — soft delete using deletedAt or hard delete based on choice", labels: ["Backend"] },
+                        { title: "🔄 Toggle isEnabled (Service function to implement)", labels: ["Backend"] }
+                    ]
+                }
+            ]
+        };
+
+        const labelTypes = [
+            'Frontend', 'Backend', 'Fullstack', 'Design', 'Testing', 
+            'Documentation', 'Urgent', 'Deferred'
+        ];
+
+        const labelEmojis = {
+            'Frontend': '🎨',
+            'Backend': '⚙️',
+            'Fullstack': '🌐',
+            'Design': '🎭',
+            'Testing': '🧪',
+            'Documentation': '📚',
+            'Urgent': '🚨',
+            'Deferred': '⏳'
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!localStorage.getItem('taskTrackerProgress_v3')) {
+                populateInitialTasks();
+            } else {
+                loadProgress();
+            }
+
+            renumberTasks();
+            updateStats();
+
+            document.addEventListener('click', function (event) {
+                if (!event.target.closest('.task-menu-btn') && !event.target.closest('.task-menu')) {
+                    closeAllTaskMenus();
+                }
+            });
+        });
+
+        function populateInitialTasks() {
+            for (const sectionId in initialTasksData) {
+                const sectionElement = document.getElementById(sectionId);
+                if (sectionElement) {
+                    const taskListElement = sectionElement.querySelector('.task-list');
+                    if (taskListElement) {
+                        taskListElement.innerHTML = '';
+                        initialTasksData[sectionId].forEach(taskData => {
+                            const taskElement = createTaskElementFromData(taskData, false);
+                            taskListElement.appendChild(taskElement);
+                        });
+                    }
+                }
+            }
+        }
+
+        function createTaskElementFromData(taskData, isSubtask) {
+            const taskElement = createTaskElement('0', taskData.title, taskData.notes, isSubtask, taskData.completed);
+
+            // Add labels without duplicates
+            if (taskData.labels && taskData.labels.length > 0) {
+                const labelsContainer = taskElement.querySelector('.task-labels');
+                const uniqueLabels = [...new Set(taskData.labels)]; // Remove duplicates
+                uniqueLabels.forEach(labelType => {
+                    const labelSpan = document.createElement('span');
+                    labelSpan.className = `label ${labelType.toLowerCase().replace(/\s+/g, '')}`;
+                    const emoji = labelEmojis[labelType] || '🏷️';
+                    labelSpan.innerHTML = `${emoji} ${labelType}`;
+                    labelsContainer.appendChild(labelSpan);
+                });
+            }
+
+            if (taskData.subtasks && taskData.subtasks.length > 0) {
+                let subtaskContainer = taskElement.querySelector('.subtasks');
+                if (!subtaskContainer) {
+                    subtaskContainer = document.createElement('ul');
+                    subtaskContainer.className = 'subtasks';
+                    const labelsDiv = taskElement.querySelector('.task-labels');
+                    labelsDiv.insertAdjacentElement('afterend', subtaskContainer);
+                }
+                taskData.subtasks.forEach(subtaskData => {
+                    subtaskContainer.appendChild(createTaskElementFromData(subtaskData, true));
+                });
+
+                taskElement.classList.add('has-subtasks');
+            }
+            return taskElement;
+        }
+
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            section.classList.toggle('collapsed');
+            saveProgress();
+        }
+
+        function toggleTaskCollapse(taskItem, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+
+            if (taskItem.classList.contains('has-subtasks')) {
+                taskItem.classList.toggle('collapsed');
+                saveProgress();
+            }
+        }
+
+        function toggleTask(checkbox) {
+            const taskItem = checkbox.closest('.task-item');
+            taskItem.classList.toggle('completed');
+            checkbox.classList.toggle('checked');
+
+            if (!taskItem.classList.contains('completed')) {
+                const subCheckboxes = taskItem.querySelectorAll('.subtasks .task-checkbox.checked');
+                subCheckboxes.forEach(subCheckbox => {
+                    subCheckbox.classList.remove('checked');
+                    subCheckbox.closest('.task-item').classList.remove('completed');
+                });
+            } else {
+                checkAndCompleteParent(taskItem);
+            }
+
+            updateStats();
+            saveProgress();
+        }
+
+        function checkAndCompleteParent(taskItem) {
+            const parentSubtasksList = taskItem.closest('.subtasks');
+            if (parentSubtasksList) {
+                const parentTaskItem = parentSubtasksList.closest('.task-item');
+                if (parentTaskItem) {
+                    const allSiblings = parentSubtasksList.querySelectorAll(':scope > .task-item');
+                    const allSiblingsCompleted = Array.from(allSiblings).every(sibling => sibling.classList.contains('completed'));
+                    if (allSiblingsCompleted) {
+                        parentTaskItem.classList.add('completed');
+                        parentTaskItem.querySelector(':scope > .task-header .task-checkbox').classList.add('checked');
+                        checkAndCompleteParent(parentTaskItem);
+                    }
+                }
+            }
+        }
+
+        function updateStats() {
+            const tasks = document.querySelectorAll('.content .task-item');
+            let completed = 0;
+            let total = tasks.length;
+
+            tasks.forEach(task => {
+                if (task.classList.contains('completed')) {
+                    completed++;
+                }
+            });
+
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            document.getElementById('completed-count').textContent = completed;
+            document.getElementById('total-count').textContent = total;
+            document.getElementById('percentage').textContent = percentage + '%';
+
+            const progressBar = document.querySelector('.progress-fill');
+            if (progressBar) progressBar.style.width = percentage + '%';
+        }
+
+        function createTaskElement(taskNumber, title, notes, isSubtask = false, isCompleted = false) {
+            const newTask = document.createElement('li');
+            newTask.className = 'task-item';
+            if (isCompleted) {
+                newTask.classList.add('completed');
+            }
+
+            const checkboxClass = isCompleted ? 'task-checkbox checked' : 'task-checkbox';
+
+            newTask.innerHTML = `
+                <div class="task-header" onclick="toggleTaskCollapse(this.closest('.task-item'), event)">
+                    <span class="task-toggle-icon">▼</span>
+                    <div class="${checkboxClass}" onclick="event.stopPropagation(); toggleTask(this)"></div>
+                    <span class="task-number">${taskNumber}</span>
+                    <span class="task-title" contenteditable="true" onblur="handleContentEditableBlur(this)" onclick="event.stopPropagation()">${title}</span>
+                    <div class="task-actions">
+                        <button class="task-menu-btn" onclick="event.stopPropagation(); toggleTaskMenu(this, event)" title="Task Actions"><i class="fas fa-ellipsis-v"></i></button>
+                        <div class="task-menu">
+                            <button onclick="handleMenuAction('addSubtask', this)"><i class="fas fa-plus-circle"></i> Add Subtask</button>
+                            <button onclick="handleMenuAction('addSibling', this)"><i class="fas fa-level-down-alt fa-rotate-270"></i> Add Sibling</button>
+                            <button onclick="handleMenuAction('addLabel', this)"><i class="fas fa-tag"></i> Add Label</button>
+                            <button onclick="handleMenuAction('deleteTask', this)"><i class="fas fa-trash-alt"></i> Delete Task</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="task-content">
+                    <div class="task-notes" contenteditable="true" onblur="handleContentEditableBlur(this)" onclick="event.stopPropagation()">${notes || ''}</div>
+                    <div class="task-labels"></div>
+                </div>
+                <ul class="subtasks"></ul>`;
+            return newTask;
+        }
+
+        function handleContentEditableBlur(element) {
+            let content = element.innerHTML;
+            content = content.replace(/<div>/gi, '\n').replace(/<\/div>/gi, '');
+            content = content.replace(/<p>/gi, '\n').replace(/<\/p>/gi, '');
+            content = content.replace(/<br\s*\/?>/gi, '\n');
+            element.textContent = content.replace(/<[^>]*>/g, '');
+            saveProgress();
+        }
+
+        function closeAllTaskMenus() {
+            document.querySelectorAll('.task-menu.show').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+
+        function toggleTaskMenu(buttonEl, event) {
+            event.stopPropagation();
+            const menu = buttonEl.nextElementSibling;
+            const isCurrentlyOpen = menu.classList.contains('show');
+            closeAllTaskMenus();
+            if (!isCurrentlyOpen) {
+                menu.classList.add('show');
+            }
+        }
+
+        function handleMenuAction(action, menuItemEl) {
+            const taskItem = menuItemEl.closest('.task-item');
+            closeAllTaskMenus();
+
+            if (action === 'addSubtask') addSubtaskInternal(taskItem);
+            else if (action === 'addSibling') addSiblingInternal(taskItem);
+            else if (action === 'addLabel') addLabelInternal(taskItem);
+            else if (action === 'deleteTask') deleteTaskInternal(taskItem);
+        }
+
+        function addLabelInternal(taskItem) {
+            const labelsContainer = taskItem.querySelector('.task-labels');
+            
+            // Create dropdown for label selection
+            const labelSelect = document.createElement('select');
+            labelSelect.className = 'label-input';
+            labelSelect.innerHTML = '<option value="">Select a label...</option>';
+            
+            labelTypes.forEach(labelType => {
+                const option = document.createElement('option');
+                option.value = labelType;
+                option.textContent = `${labelEmojis[labelType] || '🏷️'} ${labelType}`;
+                labelSelect.appendChild(option);
+            });
+
+            labelSelect.onchange = function() {
+                if (this.value) {
+                    // Check if label already exists
+                    const existingLabels = Array.from(labelsContainer.querySelectorAll('.label')).map(label => 
+                        label.textContent.replace(/^[^\s]+\s/, '') // Remove emoji
+                    );
+                    
+                    if (!existingLabels.includes(this.value)) {
+                        const labelSpan = document.createElement('span');
+                        labelSpan.className = `label ${this.value.toLowerCase().replace(/\s+/g, '')}`;
+                        const emoji = labelEmojis[this.value] || '🏷️';
+                        labelSpan.innerHTML = `${emoji} ${this.value}`;
+                        
+                        // Add click to remove functionality
+                        labelSpan.onclick = function() {
+                            if (confirm('Remove this label?')) {
+                                this.remove();
+                                saveProgress();
+                            }
+                        };
+                        
+                        labelsContainer.appendChild(labelSpan);
+                        saveProgress();
+                    }
+                    this.remove();
+                }
+            };
+
+            labelsContainer.appendChild(labelSelect);
+            labelSelect.focus();
+        }
+
+        function addSubtaskInternal(parentTask) {
+            let subtaskContainer = parentTask.querySelector(':scope > .subtasks');
+            if (!subtaskContainer) {
+                subtaskContainer = document.createElement('ul');
+                subtaskContainer.className = 'subtasks';
+                const taskContent = parentTask.querySelector(':scope > .task-content');
+                taskContent.insertAdjacentElement('afterend', subtaskContainer);
+            }
+
+            const newTask = createTaskElement('0.0', '🆕 New Subtask', '', true);
+            subtaskContainer.appendChild(newTask);
+
+            parentTask.classList.add('has-subtasks');
+
+            renumberTasks();
+            updateStats();
+            saveProgress();
+
+            setTimeout(() => {
+                const titleElement = newTask.querySelector('.task-title');
+                titleElement.focus();
+                document.execCommand('selectAll', false, null);
+            }, 100);
+        }
+
+        function addSiblingInternal(currentTask) {
+            const parentContainer = currentTask.parentElement;
+            const isSubtask = parentContainer.classList.contains('subtasks');
+            const newTask = createTaskElement('0.0', '🆕 New Sibling Task', '', isSubtask);
+
+            currentTask.insertAdjacentElement('afterend', newTask);
+            renumberTasks();
+            updateStats();
+            saveProgress();
+
+            setTimeout(() => {
+                const titleElement = newTask.querySelector('.task-title');
+                titleElement.focus();
+                document.execCommand('selectAll', false, null);
+            }, 100);
+        }
+
+        function deleteTaskInternal(taskItem) {
+            if (confirm('Are you sure you want to delete this task and all its subtasks?')) {
+                const parentTask = taskItem.closest('.subtasks')?.closest('.task-item');
+                taskItem.remove();
+
+                if (parentTask) {
+                    const remainingSubtasks = parentTask.querySelector(':scope > .subtasks');
+                    if (!remainingSubtasks || remainingSubtasks.children.length === 0) {
+                        parentTask.classList.remove('has-subtasks');
+                    }
+                }
+
+                renumberTasks();
+                updateStats();
+                saveProgress();
+            }
+        }
+
+        function addNewTaskToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (!section) return;
+
+            const taskList = section.querySelector('.task-list');
+            if (!taskList) return;
+
+            const newTask = createTaskElement('0.0', '🆕 New Task', '');
+            taskList.appendChild(newTask);
+
+            renumberTasks();
+            updateStats();
+            saveProgress();
+
+            setTimeout(() => {
+                const titleElement = newTask.querySelector('.task-title');
+                titleElement.focus();
+                document.execCommand('selectAll', false, null);
+            }, 100);
+        }
+
+        function renumberTasks() {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach((section, sectionIndex) => {
+                const mainTaskList = section.querySelector('.task-list');
+                if (mainTaskList) {
+                    renumberListOfTasks(mainTaskList, `${sectionIndex + 1}`);
+                }
+            });
+            updateStats();
+        }
+
+        function renumberListOfTasks(listElement, parentNumber) {
+            const tasks = listElement.querySelectorAll(':scope > .task-item');
+            tasks.forEach((task, taskIndex) => {
+                const currentTaskNumber = `${parentNumber}.${taskIndex + 1}`;
+                task.querySelector('.task-number').textContent = currentTaskNumber;
+                task.dataset.taskId = currentTaskNumber;
+
+                const subtaskContainer = task.querySelector(':scope > .subtasks');
+                if (subtaskContainer && subtaskContainer.children.length > 0) {
+                    renumberListOfTasks(subtaskContainer, currentTaskNumber);
+                    task.classList.add('has-subtasks');
+                } else {
+                    task.classList.remove('has-subtasks');
+                }
+            });
+        }
+
+        function promptNewMainTask() {
+            const sectionId = prompt("Enter section to add task to:\n• 'public-section' for Public features\n• 'admin-section' for Admin features", "public-section");
+            if (!sectionId) return;
+
+            const section = document.getElementById(sectionId);
+            if (!section) {
+                alert("❌ Section not found! Please use 'public-section' or 'admin-section'");
+                return;
+            }
+            addNewTaskToSection(sectionId);
+        }
+
+        function exportProgress() {
+            const dataToExport = { sections: {} };
+            document.querySelectorAll('.section').forEach(sectionEl => {
+                const sectionId = sectionEl.id;
+                dataToExport.sections[sectionId] = {
+                    collapsed: sectionEl.classList.contains('collapsed'),
+                    tasks: []
+                };
+                sectionEl.querySelectorAll(':scope > .section-content > .task-list > .task-item').forEach(taskEl => {
+                    dataToExport.sections[sectionId].tasks.push(serializeTask(taskEl));
+                });
+            });
+
+            const dataStr = JSON.stringify(dataToExport, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `task-tracker-progress-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function serializeTask(taskEl) {
+            const taskData = {
+                title: taskEl.querySelector('.task-title').textContent,
+                notes: taskEl.querySelector('.task-notes').textContent,
+                completed: taskEl.classList.contains('completed'),
+                collapsed: taskEl.classList.contains('collapsed'),
+                labels: Array.from(taskEl.querySelectorAll('.task-labels .label')).map(labelEl => 
+                    labelEl.textContent.replace(/^[^\s]+\s/, '') // Remove emoji from label text
+                ),
+                subtasks: []
+            };
+            const subtasksContainer = taskEl.querySelector(':scope > .subtasks');
+            if (subtasksContainer) {
+                subtasksContainer.querySelectorAll(':scope > .task-item').forEach(subtaskEl => {
+                    taskData.subtasks.push(serializeTask(subtaskEl));
+                });
+            }
+            return taskData;
+        }
+
+        function saveProgress() {
+            const dataToSave = { sections: {} };
+            document.querySelectorAll('.section').forEach(sectionEl => {
+                const sectionId = sectionEl.id;
+                dataToSave.sections[sectionId] = {
+                    collapsed: sectionEl.classList.contains('collapsed'),
+                    tasks: []
+                };
+                const taskList = sectionEl.querySelector(':scope > .section-content > .task-list');
+                if (taskList) {
+                    taskList.querySelectorAll(':scope > .task-item').forEach(taskEl => {
+                        dataToSave.sections[sectionId].tasks.push(serializeTask(taskEl));
+                    });
+                }
+            });
+            localStorage.setItem('taskTrackerProgress_v3', JSON.stringify(dataToSave));
+        }
+
+        function loadProgressPrompt() {
+            if (confirm("⚠️ Loading progress will overwrite current tasks. Are you sure?")) {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.json';
+                fileInput.onchange = e => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = res => {
+                            try {
+                                const jsonData = JSON.parse(res.target.result);
+                                loadTasksFromJson(jsonData);
+                                localStorage.setItem('taskTrackerProgress_v3', JSON.stringify(jsonData));
+                                alert("✅ Progress loaded successfully!");
+                            } catch (err) {
+                                alert("❌ Error parsing JSON file: " + err.message);
+                            }
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                fileInput.click();
+            }
+        }
+
+        function loadProgress() {
+            const savedData = localStorage.getItem('taskTrackerProgress_v3');
+            if (savedData) {
+                try {
+                    const jsonData = JSON.parse(savedData);
+                    loadTasksFromJson(jsonData);
+                } catch (e) {
+                    console.error("Error loading progress from localStorage:", e);
+                    localStorage.removeItem('taskTrackerProgress_v3');
+                    populateInitialTasks();
+                }
+            } else {
+                populateInitialTasks();
+            }
+        }
+
+        function loadTasksFromJson(jsonData) {
+            if (!jsonData || !jsonData.sections) {
+                console.error("Invalid data format for loading tasks.");
+                populateInitialTasks();
+                return;
+            }
+
+            for (const sectionId in jsonData.sections) {
+                const sectionData = jsonData.sections[sectionId];
+                const sectionElement = document.getElementById(sectionId);
+                if (sectionElement) {
+                    if (sectionData.collapsed) {
+                        sectionElement.classList.add('collapsed');
+                    } else {
+                        sectionElement.classList.remove('collapsed');
+                    }
+
+                    const taskListElement = sectionElement.querySelector('.task-list');
+                    if (taskListElement) {
+                        taskListElement.innerHTML = '';
+                        const tasksArray = sectionData.tasks || sectionData;
+
+                        if (Array.isArray(tasksArray)) {
+                            tasksArray.forEach(taskData => {
+                                const taskElement = createTaskElementFromDataWithCollapse(taskData, false);
+                                taskListElement.appendChild(taskElement);
+                            });
+                        }
+                    }
+                }
+            }
+            renumberTasks();
+            updateStats();
+        }
+
+        function createTaskElementFromDataWithCollapse(taskData, isSubtask) {
+            const taskElement = createTaskElement('0', taskData.title, taskData.notes, isSubtask, taskData.completed);
+
+            if (taskData.collapsed) {
+                taskElement.classList.add('collapsed');
+            }
+
+            // Add labels without duplicates
+            if (taskData.labels && taskData.labels.length > 0) {
+                const labelsContainer = taskElement.querySelector('.task-labels');
+                const uniqueLabels = [...new Set(taskData.labels)]; // Remove duplicates
+                uniqueLabels.forEach(labelType => {
+                    const labelSpan = document.createElement('span');
+                    labelSpan.className = `label ${labelType.toLowerCase().replace(/\s+/g, '')}`;
+                    const emoji = labelEmojis[labelType] || '🏷️';
+                    labelSpan.innerHTML = `${emoji} ${labelType}`;
+                    
+                    // Add click to remove functionality
+                    labelSpan.onclick = function() {
+                        if (confirm('Remove this label?')) {
+                            this.remove();
+                            saveProgress();
+                        }
+                    };
+                    
+                    labelsContainer.appendChild(labelSpan);
+                });
+            }
+
+            if (taskData.subtasks && taskData.subtasks.length > 0) {
+                let subtaskContainer = taskElement.querySelector('.subtasks');
+                if (!subtaskContainer) {
+                    subtaskContainer = document.createElement('ul');
+                    subtaskContainer.className = 'subtasks';
+                    const taskContent = taskElement.querySelector('.task-content');
+                    taskContent.insertAdjacentElement('afterend', subtaskContainer);
+                }
+                taskData.subtasks.forEach(subtaskData => {
+                    subtaskContainer.appendChild(createTaskElementFromDataWithCollapse(subtaskData, true));
+                });
+
+                taskElement.classList.add('has-subtasks');
+            }
+            return taskElement;
+        }
+    </script>
+</body>
+
+</html>

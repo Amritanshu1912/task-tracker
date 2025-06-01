@@ -1,0 +1,82 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Next.js build output
+/.next/
+/out/
+
+# Next.js cache
+.next/cache
+
+# Production build files
+.next/standalone
+.next/static
+
+# ESLint cache
+.eslintcache
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Test results
+/coverage
+/reports
+
+# Local environment variables
+# Exclude all .env files apart from .env.example or .env.template
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+# If you want to version control a template, uncomment the following lines:
+# !.env.example
+# !.env.template
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Editor directories and files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Optional Chokidar data directory
+.chokidar.json
+
+# Optional Sentry files
+.sentryclirc
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarnclean
+
+# dotenv environment variables file
+.env
+
+#vercel
+.vercel
+
+# TurboRepo
+.turbo
