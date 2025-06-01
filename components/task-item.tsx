@@ -1,29 +1,38 @@
-"use client"
+"use client";
 
-// components/task-item.tsx
-import type React from "react"
-import { useState, useEffect, useCallback, memo } from "react"
-import type { Task } from "@/lib/types"
-import { useTaskStore } from "@/lib/store"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ChevronDown, ChevronRight, MoreVertical, Plus, Trash2, Edit3 } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { TaskEditDialog } from "./task-edit-dialog"
-import { cn } from "@/lib/utils"
-import { LABEL_EMOJIS } from "@/lib/labels"
-import { taskOrSubtaskMatchesFilters } from "./task-section"
+import { useState, useEffect, useCallback, memo } from "react";
+import type { Task, StatusFilterState } from "@/lib/types";
+import { useTaskStore } from "@/lib/store";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  ChevronDown,
+  ChevronRight,
+  MoreVertical,
+  Plus,
+  Trash2,
+  Edit3,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TaskEditDialog } from "./task-edit-dialog";
+import { cn } from "@/lib/utils";
+import { LABEL_EMOJIS } from "@/lib/labels";
+import { taskMatchesFilters } from "./task-section";
 
 interface TaskItemProps {
-  task: Task
-  sectionId: string
-  taskNumber: string
-  parentId?: string
-  level?: number
+  task: Task;
+  sectionId: string;
+  taskNumber: string;
+  parentId?: string;
+  level?: number;
 }
 
-// Use memo to prevent unnecessary re-renders
 export const TaskItem = memo(function TaskItem({
   task,
   sectionId,
@@ -31,99 +40,131 @@ export const TaskItem = memo(function TaskItem({
   parentId: directParentIdOfThisTask,
   level = 0,
 }: TaskItemProps) {
-  const [isEditingTitle, setIsEditingTitle] = useState(false)
-  const [isEditingNotes, setIsEditingNotes] = useState(false)
-  const areAllNotesCollapsed = useTaskStore((state) => state.areAllNotesCollapsed)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [dialogMode, setDialogMode] = useState<"edit" | "createSubtask">("edit")
-  const maxVisibleDepth = useTaskStore((state) => state.maxVisibleDepth)
-  const activeLabelFilters = useTaskStore((state) => state.activeLabelFilters)
-  const matchesFilters = taskOrSubtaskMatchesFilters(task, activeLabelFilters)
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"edit" | "createSubtask">(
+    "edit"
+  );
 
-  const hasSubtasks = task.subtasks && task.subtasks.length > 0
-  const hasNotes = task.notes && task.notes.trim() !== ""
+  const areAllNotesCollapsed = useTaskStore(
+    (state) => state.areAllNotesCollapsed
+  );
+  const maxVisibleDepth = useTaskStore((state) => state.maxVisibleDepth);
+  const activeLabelFilters = useTaskStore((state) => state.activeLabelFilters);
+  const activeStatusFilter = useTaskStore((state) => state.activeStatusFilter);
+
+  const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+  const hasNotes = task.notes && task.notes.trim() !== "";
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (!hasSubtasks) return true // No subtasks, effectively "collapsed" in terms of showing children
+    // Collapse if no subtasks or if task level exceeds max visible depth
+    if (!hasSubtasks) return true;
     if (maxVisibleDepth !== null && level >= maxVisibleDepth) {
-      return true // Default to collapsed by global setting
+      return true;
     }
-    return false // Default to expanded
-  })
+    return false;
+  });
 
-  // Only update collapse state when maxVisibleDepth or level changes
   useEffect(() => {
+    // Synchronize collapse state with global max visible depth
     if (hasSubtasks) {
-      const shouldBeGloballyCollapsed = maxVisibleDepth !== null && level >= maxVisibleDepth
-
-      setIsCollapsed(shouldBeGloballyCollapsed)
+      const shouldBeGloballyCollapsed =
+        maxVisibleDepth !== null && level >= maxVisibleDepth;
+      if (isCollapsed !== shouldBeGloballyCollapsed) {
+        setIsCollapsed(shouldBeGloballyCollapsed);
+      }
     }
-  }, [level, hasSubtasks, maxVisibleDepth])
+  }, [level, hasSubtasks, maxVisibleDepth, isCollapsed]);
 
-  // Memoize event handlers to prevent recreating on every render
   const handleToggleChevronCollapse = useCallback(
     (e: React.MouseEvent) => {
-      e.stopPropagation()
+      e.stopPropagation(); // Prevent event bubbling
       if (hasSubtasks) {
-        setIsCollapsed((prev) => !prev)
+        setIsCollapsed((prev) => !prev);
       }
     },
-    [hasSubtasks],
-  )
+    [hasSubtasks]
+  );
 
   const handleToggleComplete = useCallback(
     (checked: boolean) => {
-      useTaskStore.getState().updateTask(sectionId, task.id, { completed: checked }, directParentIdOfThisTask)
+      useTaskStore
+        .getState()
+        .updateTask(
+          sectionId,
+          task.id,
+          { completed: checked },
+          directParentIdOfThisTask
+        );
     },
-    [sectionId, task.id, directParentIdOfThisTask],
-  )
+    [sectionId, task.id, directParentIdOfThisTask]
+  );
 
   const handleTitleChange = useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
       useTaskStore
         .getState()
-        .updateTask(sectionId, task.id, { title: e.target.textContent || task.title }, directParentIdOfThisTask)
-      setIsEditingTitle(false)
+        .updateTask(
+          sectionId,
+          task.id,
+          { title: e.target.textContent || task.title },
+          directParentIdOfThisTask
+        );
+      setIsEditingTitle(false);
     },
-    [sectionId, task.id, task.title, directParentIdOfThisTask],
-  )
+    [sectionId, task.id, task.title, directParentIdOfThisTask]
+  );
 
   const handleNotesChange = useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
-      const newNotes = e.target.innerText || ""
-      useTaskStore.getState().updateTask(sectionId, task.id, { notes: newNotes }, directParentIdOfThisTask)
-      setIsEditingNotes(false)
+      const newNotes = e.target.innerText || "";
+      useTaskStore
+        .getState()
+        .updateTask(
+          sectionId,
+          task.id,
+          { notes: newNotes },
+          directParentIdOfThisTask
+        );
+      setIsEditingNotes(false);
     },
-    [sectionId, task.id, directParentIdOfThisTask],
-  )
+    [sectionId, task.id, directParentIdOfThisTask]
+  );
 
   const handleDelete = useCallback(() => {
-    if (window.confirm("Are you sure you want to delete this task and all its subtasks?")) {
-      useTaskStore.getState().deleteTask(sectionId, task.id, directParentIdOfThisTask)
+    if (
+      window.confirm(
+        "Are you sure you want to delete this task and all its subtasks?"
+      )
+    ) {
+      useTaskStore
+        .getState()
+        .deleteTask(sectionId, task.id, directParentIdOfThisTask);
     }
-  }, [sectionId, task.id, directParentIdOfThisTask])
+  }, [sectionId, task.id, directParentIdOfThisTask]);
 
   const handleEditTask = useCallback(() => {
-    setDialogMode("edit")
-    setIsEditDialogOpen(true)
-  }, [])
+    setDialogMode("edit");
+    setIsEditDialogOpen(true);
+  }, []);
 
   const handleOpenAddSubtaskDialog = useCallback(() => {
-    setDialogMode("createSubtask")
-    setIsEditDialogOpen(true)
-  }, [])
+    setDialogMode("createSubtask");
+    setIsEditDialogOpen(true);
+  }, []);
 
-  if (!matchesFilters) {
-    return null // If this task and its children don't match filters, don't render it
-  }
+  const showSubtasks = hasSubtasks && !isCollapsed;
 
-  // --- Collapsing Logic ---
-  const showSubtasks = hasSubtasks && !isCollapsed
-
-  // Use cn for cleaner conditional class management
-  const taskItemClasses = cn("task-item", "rounded-md", "bg-card", "shadow-sm", {
-    "task-completed": task.completed, // Marker class for completed state styling from CSS
-  })
+  const taskItemClasses = cn(
+    "task-item",
+    "rounded-md",
+    "bg-card",
+    "shadow-sm",
+    {
+      "task-completed": task.completed,
+    }
+  );
 
   return (
     <>
@@ -132,13 +173,14 @@ export const TaskItem = memo(function TaskItem({
           <div
             className="w-6 h-6 flex items-center justify-center cursor-pointer mt-1"
             onClick={handleToggleChevronCollapse}
+            role="button"
             aria-expanded={!isCollapsed && hasSubtasks}
             aria-label={isCollapsed ? "Expand subtasks" : "Collapse subtasks"}
             tabIndex={hasSubtasks ? 0 : -1}
             onKeyDown={(e) => {
               if (hasSubtasks && (e.key === "Enter" || e.key === " ")) {
-                e.preventDefault()
-                handleToggleChevronCollapse(e as any)
+                e.preventDefault();
+                handleToggleChevronCollapse(e as any);
               }
             }}
           >
@@ -157,7 +199,9 @@ export const TaskItem = memo(function TaskItem({
             aria-labelledby={`task-title-${task.id}`}
           />
 
-          <div className="min-w-[60px] text-xs bg-muted px-2 py-1 rounded text-center mt-1">{taskNumber}</div>
+          <div className="min-w-[60px] text-xs bg-muted px-2 py-1 rounded text-center mt-1">
+            {taskNumber}
+          </div>
 
           <div className="flex-1">
             <div
@@ -169,7 +213,7 @@ export const TaskItem = memo(function TaskItem({
               className={cn(
                 "outline-none rounded px-2 py-1 text-sm",
                 isEditingTitle && "bg-muted ring-1 ring-ring",
-                task.completed && "line-through opacity-95",
+                task.completed && "line-through opacity-95"
               )}
             >
               {task.title}
@@ -184,7 +228,7 @@ export const TaskItem = memo(function TaskItem({
                 className={cn(
                   "text-sm text-muted-foreground mt-2 outline-none rounded px-2 py-1 whitespace-pre-wrap",
                   isEditingNotes ? "bg-muted ring-1 ring-ring" : "italic",
-                  task.completed && "line-through opacity-80",
+                  task.completed && "line-through opacity-80"
                 )}
               >
                 {task.notes}
@@ -194,7 +238,11 @@ export const TaskItem = memo(function TaskItem({
             {task.labels.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {task.labels.map((label, i) => (
-                  <Badge key={`${label}-${i}`} variant="outline" className="text-xs px-1.5 py-0.5">
+                  <Badge
+                    key={`${label}-${i}`}
+                    variant="outline"
+                    className="text-xs px-1.5 py-0.5"
+                  >
                     {LABEL_EMOJIS[label] || "🏷️"} {label}
                   </Badge>
                 ))}
@@ -216,7 +264,10 @@ export const TaskItem = memo(function TaskItem({
                 <DropdownMenuItem onClick={handleOpenAddSubtaskDialog}>
                   <Plus className="mr-2 h-4 w-4" /> Add Subtask
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  className="text-destructive"
+                >
                   <Trash2 className="mr-2 h-4 w-4" /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -228,22 +279,28 @@ export const TaskItem = memo(function TaskItem({
           <div
             className={`pl-10 pr-4 pb-3 ml-6 ${
               level < 1
-                ? "border-l-2 border-border" // Main level subtask indentation line
-                : "border-l-2 border-border/50 hover:border-border/70" // Nested subtask indentation line (more subtle)
+                ? "border-l-2 border-border" // Styles indentation for top-level subtasks
+                : "border-l-2 border-border/50 hover:border-border/70" // Styles indentation for nested subtasks
             }`}
           >
-            {/* Use windowing for large lists */}
-            {task.subtasks.map((subtask, index) => (
-              <div key={subtask.id} className="mt-3">
-                <TaskItem
-                  task={subtask}
-                  sectionId={sectionId}
-                  taskNumber={`${taskNumber}.${index + 1}`}
-                  parentId={task.id}
-                  level={level + 1}
-                />
-              </div>
-            ))}
+            {task.subtasks.map(
+              (subtask, index) =>
+                taskMatchesFilters(
+                  subtask,
+                  activeLabelFilters,
+                  activeStatusFilter
+                ) && (
+                  <div key={subtask.id} className="mt-3">
+                    <TaskItem
+                      task={subtask}
+                      sectionId={sectionId}
+                      taskNumber={`${taskNumber}.${index + 1}`}
+                      parentId={task.id}
+                      level={level + 1}
+                    />
+                  </div>
+                )
+            )}
           </div>
         )}
       </div>
@@ -259,5 +316,5 @@ export const TaskItem = memo(function TaskItem({
         />
       )}
     </>
-  )
-})
+  );
+});

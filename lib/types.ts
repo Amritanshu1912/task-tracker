@@ -2,6 +2,7 @@
 
 // SectionId can be extended for more sections in the future
 export type SectionId = "public-section" | "admin-section" // Or string for flexibility
+export type StatusFilterState = 'active' | 'completed' | null;
 
 // Core Task type for all task-related data
 export interface Task {
@@ -31,9 +32,11 @@ export interface TaskStore {
   }
   areAllNotesCollapsed: boolean
   activeLabelFilters: string[]
+  activeStatusFilter: StatusFilterState;
 
   // Label filter actions
   toggleLabelFilter: (label: string) => void
+  toggleStatusFilter: (filter: 'active' | 'completed') => void;
   clearLabelFilters: () => void
 
   // UI state
