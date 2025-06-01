@@ -1,74 +1,94 @@
-"use client"
+// components/task-section.tsx
 
-import { useState, useMemo, useCallback } from "react"
-import type { Task } from "@/lib/types"
-import { TaskItem } from "@/components/task-item"
-import { Button } from "@/components/ui/button"
-import { Plus, ChevronDown, ChevronRight } from "lucide-react"
-import { Card } from "@/components/ui/card"
-import { useTaskStore } from "@/lib/store"
-import React from "react"
+"use client";
+
+import { useState, useMemo, useCallback } from "react";
+import type { Task, StatusFilterState } from "@/lib/types";
+import { TaskItem } from "@/components/task-item";
+import { Button } from "@/components/ui/button";
+import { Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { useTaskStore } from "@/lib/store";
+import React from "react";
 
 interface TaskSectionProps {
-  id: string
-  title: string
-  icon: string
-  description: string
-  tasks: Task[]
-  maxVisibleDepth: number // Declare maxVisibleDepth in the interface
+  id: string;
+  title: string;
+  icon: string;
+  description: string;
+  tasks: Task[];
 }
 
-// Memoized filter function to avoid recalculating on every render
-export const taskOrSubtaskMatchesFilters = (() => {
-  const cache = new Map<string, boolean>()
+// Recursively checks if a task or its subtasks match active filters.
+export const taskMatchesFilters = (
+  task: Task,
+  activeLabels: string[],
+  activeStatus: StatusFilterState | null
+): boolean => {
+  let result = false;
 
-  return function matchesFilters(task: Task, activeFilters: string[]): boolean {
-    if (activeFilters.length === 0) return true
+  const taskMatchesLabels =
+    activeLabels.length === 0 ||
+    task.labels.some((label) => activeLabels.includes(label));
 
-    // Create a cache key based on task ID and active filters
-    const cacheKey = `${task.id}-${activeFilters.join(",")}`
-
-    if (cache.has(cacheKey)) {
-      return cache.get(cacheKey)!
+  if (activeStatus === "active") {
+    if (task.completed) {
+      result = false;
+    } else {
+      if (taskMatchesLabels) {
+        result = true;
+      } else if (task.subtasks && task.subtasks.length > 0) {
+        result = task.subtasks.some((st) =>
+          taskMatchesFilters(st, activeLabels, "active")
+        );
+      } else {
+        result = false;
+      }
     }
+  } else if (activeStatus === "completed") {
+    let isExactlyThisTaskAMatch = task.completed && taskMatchesLabels;
 
-    // Check if task has any of the active filters
-    if (task.labels.some((label) => activeFilters.includes(label))) {
-      cache.set(cacheKey, true)
-      return true
+    if (isExactlyThisTaskAMatch) {
+      result = true;
+    } else {
+      if (task.subtasks && task.subtasks.length > 0) {
+        result = task.subtasks.some((st) =>
+          taskMatchesFilters(st, activeLabels, "completed")
+        );
+      } else {
+        result = false;
+      }
     }
-
-    // Check subtasks recursively
-    const result = task.subtasks?.some((subtask) => matchesFilters(subtask, activeFilters)) ?? false
-
-    // Limit cache size to prevent memory leaks
-    if (cache.size > 1000) {
-      const keys = Array.from(cache.keys())
-      cache.delete(keys[0]) // Remove oldest entry
+  } else {
+    // No status filter
+    if (taskMatchesLabels) {
+      result = true;
+    } else if (task.subtasks && task.subtasks.length > 0) {
+      result = task.subtasks.some((st) =>
+        taskMatchesFilters(st, activeLabels, null)
+      );
+    } else {
+      result = false;
     }
-
-    cache.set(cacheKey, result)
-    return result
   }
-})()
+  return result;
+};
 
-/**
- * TaskSectionData - Renders a section of tasks with filtering, add, and collapse functionality.
- * Uses memoization and callbacks for performance. Modern, accessible UI.
- */
+// Renders a section of tasks with filtering, add, and collapse functionality.
+// Uses memoization and callbacks for performance.
 export const TaskSection = React.memo(function TaskSection({
   id,
   title,
   icon,
   description,
   tasks,
-  maxVisibleDepth, // Use maxVisibleDepth from props
 }: TaskSectionProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  const addTaskToSection = useTaskStore((state) => state.addTaskToSection)
-  const activeLabelFilters = useTaskStore((state) => state.activeLabelFilters)
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const addTaskToSection = useTaskStore((state) => state.addTaskToSection);
+  const activeLabelFilters = useTaskStore((state) => state.activeLabelFilters);
+  const activeStatusFilter = useTaskStore((state) => state.activeStatusFilter);
 
-  // Add new task handler - memoized to prevent recreating on every render
+  // Handler to add a new task to this section.
   const handleAddTask = useCallback(() => {
     addTaskToSection(id, {
       id: crypto.randomUUID(),
@@ -77,27 +97,31 @@ export const TaskSection = React.memo(function TaskSection({
       completed: false,
       labels: [],
       subtasks: [],
-    })
-  }, [addTaskToSection, id])
+    });
+  }, [addTaskToSection, id]);
 
-  // Keyboard accessibility for collapse/expand
-  const handleHeaderKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault()
-      setIsCollapsed((prev) => !prev)
-    }
-  }, [])
+  // Keyboard accessibility handler for section header.
+  const handleHeaderKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setIsCollapsed((prev) => !prev);
+      }
+    },
+    []
+  );
 
-  // Toggle collapse state
+  // Toggles the collapse state of the section.
   const toggleCollapse = useCallback(() => {
-    setIsCollapsed((prev) => !prev)
-  }, [])
+    setIsCollapsed((prev) => !prev);
+  }, []);
 
-  // Memoize filtered tasks to avoid recalculating on every render
+  // Filters top-level tasks based on active label and status filters.
   const filteredTopLevelTasks = useMemo(() => {
-    if (activeLabelFilters.length === 0) return tasks
-    return tasks.filter((task) => taskOrSubtaskMatchesFilters(task, activeLabelFilters))
-  }, [tasks, activeLabelFilters])
+    return tasks.filter((task) =>
+      taskMatchesFilters(task, activeLabelFilters, activeStatusFilter)
+    );
+  }, [tasks, activeLabelFilters, activeStatusFilter]);
 
   return (
     <Card className="overflow-hidden border border-border/40 shadow-sm">
@@ -126,36 +150,37 @@ export const TaskSection = React.memo(function TaskSection({
       </div>
       {!isCollapsed && (
         <div className="p-4 bg-background" id={`section-tasks-${id}`}>
-          <p className="text-sm text-muted-foreground mb-4 italic">{description}</p>
+          <p className="text-sm text-muted-foreground mb-4 italic">
+            {description}
+          </p>
           <Button
             variant="outline"
             size="sm"
             onClick={(e) => {
-              e.stopPropagation()
-              handleAddTask()
+              e.stopPropagation();
+              handleAddTask();
             }}
             className="mb-4"
             aria-label="Add Task"
           >
             <Plus size={16} className="mr-2" /> Add Task
           </Button>
-          {/* Render the list of filtered top-level tasks */}
           {filteredTopLevelTasks.length > 0 ? (
             <div className="space-y-3">
               {filteredTopLevelTasks.map((task, index) => (
                 <TaskItem
-                  key={task.id} // Crucial for React's reconciliation
+                  key={task.id}
                   task={task}
                   sectionId={id}
-                  taskNumber={`${id === "public-section" ? "1" : "2"}.${index + 1}`}
-                  level={0} // Top-level tasks are at level 0
-                  activeLabelFilters={activeLabelFilters}
-                  maxVisibleDepth={maxVisibleDepth} // Use maxVisibleDepth from props
+                  taskNumber={`${id === "public-section" ? "1" : "2"}.${
+                    index + 1
+                  }`}
+                  level={0}
                 />
               ))}
             </div>
           ) : (
-            // Message shown if no tasks are available or match filters
+            // Message displayed when no tasks are found or match filters.
             <p className="text-sm text-muted-foreground mt-4">
               {activeLabelFilters.length > 0
                 ? "No tasks match the current filters in this section."
@@ -165,5 +190,5 @@ export const TaskSection = React.memo(function TaskSection({
         </div>
       )}
     </Card>
-  )
-})
+  );
+});
