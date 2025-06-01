@@ -1,68 +1,88 @@
-"use client"
+// components/app-header.tsx
 
-import { useTaskStore } from "@/lib/store"
-import { Button } from "@/components/ui/button"
-import { Menu, Zap } from "lucide-react"
+"use client";
 
+import { useCallback } from "react";
+import { useTaskStore } from "@/lib/store";
+import { Button } from "@/components/ui/button";
+import { Zap, Save, FileDown, FileUp } from "lucide-react";
+import { exportToJson, importFromJson } from "@/lib/utils";
+
+// Renders the application header with branding and data management buttons.
 export function AppHeader() {
-  const toggleSidebar = useTaskStore((state) => state.toggleSidebar)
+  const saveToLocalStorage = useTaskStore((state) => state.saveToLocalStorage);
+
+  const handleSave = useCallback(() => {
+    saveToLocalStorage();
+    alert("Progress saved successfully!");
+  }, [saveToLocalStorage]);
+
+  // Exports the current state of sections to a JSON file.
+  const handleExport = useCallback(() => {
+    exportToJson(useTaskStore.getState().sections);
+  }, []);
+
+  // Prompts user to select a JSON file and imports it into the store.
+  const handleImport = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        importFromJson(file);
+      }
+    };
+    input.click();
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl print:hidden">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Left: Logo and Navigation */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={toggleSidebar} className="hover:bg-accent">
-            <Menu className="w-5 h-5" />
-          </Button>
-
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
               <Zap className="w-4 h-4 text-primary-foreground" />
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight">Task Tracker</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">E-commerce Platform - Phase 2</p>
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                E-commerce Platform - Phase 2
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Right: Quick Stats */}
-        <div className="flex items-center gap-4 text-sm">
-          <div className="hidden md:flex items-center gap-4">
-            <QuickStat label="Done" value={useTaskStore((state) => state.stats.completed)} variant="success" />
-            <QuickStat label="Total" value={useTaskStore((state) => state.stats.total)} variant="default" />
-            <QuickStat
-              label="Progress"
-              value={`${useTaskStore((state) => state.stats.percentage)}%`}
-              variant="primary"
-            />
-          </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSave}
+            title="Save Progress"
+          >
+            <Save className="w-5 h-5 mr-2" />
+            Save Progress
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            title="Export JSON"
+          >
+            <FileDown className="w-5 h-5 mr-2" />
+            Export JSON
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleImport}
+            title="Import JSON"
+          >
+            <FileUp className="w-5 h-5 mr-2" />
+            Import JSON
+          </Button>
         </div>
       </div>
     </header>
-  )
-}
-
-function QuickStat({
-  label,
-  value,
-  variant = "default",
-}: {
-  label: string
-  value: string | number
-  variant?: "default" | "success" | "primary"
-}) {
-  const variantClasses = {
-    default: "text-foreground",
-    success: "text-success",
-    primary: "text-primary",
-  }
-
-  return (
-    <div className="text-center">
-      <div className={`font-bold ${variantClasses[variant]}`}>{value}</div>
-      <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
-    </div>
-  )
+  );
 }
