@@ -1,7 +1,7 @@
 // lib/store.ts
 import { create } from "zustand"
 import { subscribeWithSelector } from "zustand/middleware"
-import type { Task, TaskStore, SectionId, TaskSectionData, RawTaskData } from "@/lib/types"
+import type { Task, TaskStore, SectionId, TaskSectionData, RawTaskData, StatusFilterState } from "@/lib/types"
 import { initialTasksData } from "@/lib/initial-data"
 
 // --- Helper Functions ---
@@ -96,8 +96,9 @@ export const useTaskStore = create<TaskStore>()(
     },
     stats: { completed: 0, total: 0, percentage: 0 },
     activeLabelFilters: [],
+    activeStatusFilter: null,
     areAllNotesCollapsed: false,
-    isSidebarOpen: false,
+    isSidebarOpen: true,
 
     // --- UI Actions ---
     toggleSidebar: () =>
@@ -120,6 +121,12 @@ export const useTaskStore = create<TaskStore>()(
         return { activeLabelFilters: newFilters }
       }),
     clearLabelFilters: () => set(() => ({ activeLabelFilters: [] })),
+
+    // ADD Status Filtering action
+    toggleStatusFilter: (filter: 'active' | 'completed') =>
+      set((state) => ({
+        activeStatusFilter: state.activeStatusFilter === filter ? null : filter,
+      })),
 
     maxVisibleDepth: null,
     setMaxVisibleDepth: (depth: number | null) => set(() => ({ maxVisibleDepth: depth })),
@@ -444,14 +451,14 @@ export const useTaskStore = create<TaskStore>()(
     saveToLocalStorage: () => {
       const state = get()
       const sectionsToSave: Record<SectionId, TaskSectionData> = {} as Record<SectionId, TaskSectionData>
-      ;(Object.keys(state.sections) as SectionId[]).forEach((sectionId) => {
-        sectionsToSave[sectionId] = {
-          title: state.sections[sectionId].title,
-          icon: state.sections[sectionId].icon,
-          description: state.sections[sectionId].description,
-          tasks: state.sections[sectionId].tasks,
-        }
-      })
+        ; (Object.keys(state.sections) as SectionId[]).forEach((sectionId) => {
+          sectionsToSave[sectionId] = {
+            title: state.sections[sectionId].title,
+            icon: state.sections[sectionId].icon,
+            description: state.sections[sectionId].description,
+            tasks: state.sections[sectionId].tasks,
+          }
+        })
 
       localStorage.setItem("taskTrackerProgress_v3", JSON.stringify({ sections: sectionsToSave }))
     },
