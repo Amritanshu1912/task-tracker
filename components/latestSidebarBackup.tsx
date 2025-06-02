@@ -3,14 +3,13 @@
 "use client";
 
 import type React from "react";
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
   Eye,
   EyeOff,
   FilterIcon,
-  ChevronsDownUp,
   ChevronsUpDown,
   Settings,
   Layers,
@@ -27,15 +26,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { useTaskStore } from "@/lib/store";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AVAILABLE_LABELS, LABEL_EMOJIS } from "@/lib/labels";
@@ -46,12 +36,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TaskEditDialog } from "@/components/task-edit-dialog";
 
 // AppSidebar component provides navigation, filters, and settings for the task tracker.
 export function AppSidebar() {
   const isSidebarOpen = useTaskStore((state) => state.isSidebarOpen);
   const toggleSidebar = useTaskStore((state) => state.toggleSidebar);
-  const addSection = useTaskStore((state) => state.addSection);
+  const addTaskToStore = useTaskStore((state) => state.addTask); // Use the new addTask
   const toggleAllNotes = useTaskStore((state) => state.toggleAllNotes);
   const areAllNotesCollapsed = useTaskStore(
     (state) => state.areAllNotesCollapsed
@@ -64,27 +55,7 @@ export function AppSidebar() {
   const setMaxVisibleDepth = useTaskStore((state) => state.setMaxVisibleDepth);
   const stats = useTaskStore((state) => state.stats);
 
-  const [newSectionName, setNewSectionName] = useState("");
-  const [newSectionIcon, setNewSectionIcon] = useState("📋");
-  const [isAddSectionDialogOpen, setIsAddSectionDialogOpen] = useState(false);
-
-  // Handles adding a new task section.
-  const handleAddSection = useCallback(() => {
-    if (newSectionName.trim()) {
-      const sectionId =
-        newSectionName.toLowerCase().replace(/\s+/g, "-") ||
-        `section-${crypto.randomUUID().slice(0, 8)}`;
-      addSection(sectionId, {
-        title: newSectionName,
-        icon: newSectionIcon || "📋",
-        description: `Tasks for ${newSectionName}`,
-        tasks: [],
-      });
-      setNewSectionName("");
-      setNewSectionIcon("📋");
-      setIsAddSectionDialogOpen(false);
-    }
-  }, [newSectionName, newSectionIcon, addSection]);
+  const [isAddRootTaskDialogOpen, setIsAddRootTaskDialogOpen] = useState(false);
 
   // Renders a section header with an icon and title.
   const SidebarSection = ({
@@ -221,11 +192,12 @@ export function AppSidebar() {
         </Button>
       </div>
 
+      {/* Sidebar stats. */}
       {isSidebarOpen && (
         <div className="bg-muted/30 border-b border-border/30 flex-shrink-0 -mx-0 mb-3">
           <div className="grid grid-cols-3 gap-3 text-center py-3 px-4">
             <div className="flex flex-col gap-1">
-              <div className="text-lg font-bold text-success flex items-center justify-center gap-2">
+              <div className="text-lg font-bold text-green-500 flex items-center justify-center gap-2">
                 <CircleCheck className="h-4 w-4" />
                 {stats.completed}
               </div>
@@ -258,6 +230,16 @@ export function AppSidebar() {
         )}
         aria-hidden={!isSidebarOpen}
       >
+        <SidebarSection title="Manage Tasks" icon={Layers}>
+          <SidebarButton
+            icon={Plus}
+            label="Add New Task"
+            onClick={() => setIsAddRootTaskDialogOpen(true)} // Open the shared dialog
+          />
+        </SidebarSection>
+
+        {isSidebarOpen && <Separator className="my-2" />}
+
         {isSidebarOpen && (
           <SidebarSection title="Filters" icon={FilterIcon}>
             <div className="flex items-center justify-between h-7 mb-1.5">
@@ -285,11 +267,11 @@ export function AppSidebar() {
                     variant={isSelected ? "default" : "outline"}
                     onClick={() => toggleLabelFilter(label)}
                     className={cn(
-                      "cursor-pointer text-xs transition-all duration-200 flex items-center gap-1.5", // Consistent: flex, items-center, gap
-                      "hover:scale-105 active:scale-95 py-1 px-2 rounded-full", // Consistent padding, rounded-full
+                      "cursor-pointer text-xs transition-all duration-200 flex items-center gap-1.5",
+                      "hover:scale-105 active:scale-95 py-1 px-2 rounded-full",
                       isSelected
-                        ? "bg-primary text-primary-foreground shadow-sm border-primary/50" // Slightly adjusted active style
-                        : "hover:bg-accent hover:text-accent-foreground border-border" // Consistent border
+                        ? "bg-primary text-primary-foreground shadow-sm border-primary/50"
+                        : "hover:bg-accent hover:text-accent-foreground border-border"
                     )}
                     tabIndex={0}
                     onKeyDown={(e) => {
@@ -319,11 +301,11 @@ export function AppSidebar() {
                 }
                 onClick={() => toggleStatusFilter("active")}
                 className={cn(
-                  "cursor-pointer text-xs transition-all duration-200 flex items-center gap-1.5", // Consistent: flex, items-center, gap
-                  "hover:scale-105 active:scale-95 py-1 px-2 rounded-full", // Consistent padding, rounded-full
+                  "cursor-pointer text-xs transition-all duration-200 flex items-center gap-1.5",
+                  "hover:scale-105 active:scale-95 py-1 px-2 rounded-full",
                   activeStatusFilter === "active"
-                    ? "bg-primary text-primary-foreground shadow-sm border-primary/50" // Consistent active style
-                    : "hover:bg-accent hover:text-accent-foreground border-border" // Consistent border
+                    ? "bg-primary text-primary-foreground shadow-sm border-primary/50"
+                    : "hover:bg-accent hover:text-accent-foreground border-border"
                 )}
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -342,11 +324,11 @@ export function AppSidebar() {
                 }
                 onClick={() => toggleStatusFilter("completed")}
                 className={cn(
-                  "cursor-pointer text-xs transition-all duration-200 flex items-center gap-1.5", // Consistent: flex, items-center, gap
-                  "hover:scale-105 active:scale-95 py-1 px-2 rounded-full", // Consistent padding, rounded-full
+                  "cursor-pointer text-xs transition-all duration-200 flex items-center gap-1.5",
+                  "hover:scale-105 active:scale-95 py-1 px-2 rounded-full",
                   activeStatusFilter === "completed"
-                    ? "bg-primary text-primary-foreground shadow-sm border-primary/50" // Consistent active style
-                    : "hover:bg-accent hover:text-accent-foreground border-border" // Consistent border
+                    ? "bg-primary text-primary-foreground shadow-sm border-primary/50"
+                    : "hover:bg-accent hover:text-accent-foreground border-border"
                 )}
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -362,6 +344,7 @@ export function AppSidebar() {
             </div>
           </SidebarSection>
         )}
+
         {isSidebarOpen && <Separator className="my-2" />}
 
         <SidebarSection title="View Controls" icon={Eye}>
@@ -396,63 +379,13 @@ export function AppSidebar() {
             tooltip="Show levels 0-2, collapse 3+"
           />
         </SidebarSection>
-        {isSidebarOpen && <Separator className="my-2" />}
-
-        <SidebarSection title="Content" icon={Layers}>
-          <Dialog
-            open={isAddSectionDialogOpen}
-            onOpenChange={setIsAddSectionDialogOpen}
-          >
-            <DialogTrigger asChild>
-              <SidebarButton
-                icon={Plus}
-                label="Add Section"
-                tooltip="Add New Section"
-              />
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Create New Section</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="section-icon" className="text-right">
-                    Icon
-                  </Label>
-                  <Input
-                    id="section-icon"
-                    value={newSectionIcon}
-                    onChange={(e) => setNewSectionIcon(e.target.value)}
-                    placeholder="📋"
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="section-name" className="text-right">
-                    Name
-                  </Label>
-                  <Input
-                    id="section-name"
-                    value={newSectionName}
-                    onChange={(e) => setNewSectionName(e.target.value)}
-                    placeholder="Section name"
-                    className="col-span-3"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsAddSectionDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleAddSection}>Create</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </SidebarSection>
       </div>
+      <TaskEditDialog
+        isOpen={isAddRootTaskDialogOpen}
+        onOpenChange={setIsAddRootTaskDialogOpen}
+        mode="createRootTask" // Or a new mode like "createRootTask" if TaskEditDialog needs to differentiate
+        parentId={undefined} // Explicitly null for root task
+      />
     </aside>
   );
 }

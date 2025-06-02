@@ -24,9 +24,8 @@ interface TaskEditDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   task?: Task | null;
-  sectionId: string;
   parentId?: string;
-  mode: "edit" | "createSubtask";
+  mode: "edit" | "createSubtask" | "createRootTask";
 }
 
 /**
@@ -37,7 +36,6 @@ export function TaskEditDialog({
   isOpen,
   onOpenChange,
   task,
-  sectionId,
   parentId,
   mode,
 }: TaskEditDialogProps) {
@@ -45,6 +43,26 @@ export function TaskEditDialog({
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+
+  // Determine dialog title and placeholder based on mode
+  const dialogTitleText =
+    mode === "edit"
+      ? "Edit Task"
+      : mode === "createSubtask"
+      ? "Create New Subtask"
+      : "Create New Task"; // For createRootTask
+  const titleInputPlaceholder =
+    mode === "edit"
+      ? "Task title"
+      : mode === "createSubtask"
+      ? "Subtask title"
+      : "Enter new task title";
+  const submitButtonText =
+    mode === "edit"
+      ? "Save Changes"
+      : mode === "createSubtask"
+      ? "Create Subtask"
+      : "Create Task";
 
   // Populate form fields when dialog opens or task/mode changes
   useEffect(() => {
@@ -74,15 +92,16 @@ export function TaskEditDialog({
       alert("Title cannot be empty.");
       return;
     }
-    const { updateTask, addSubtask } = useTaskStore.getState();
+    const { updateTask, addTask } = useTaskStore.getState();
+
     if (mode === "edit" && task) {
-      const updatedTaskData: Task = {
-        ...task,
+      const updatedTaskData: Partial<Task> = {
+        // Use Partial<Task> for fieldsToUpdate
         title: title.trim(),
         notes: notes.trim(),
         labels: selectedLabels,
       };
-      updateTask(sectionId, task.id, updatedTaskData, parentId);
+      updateTask(task.id, updatedTaskData);
     } else if (mode === "createSubtask") {
       if (!parentId) {
         alert("Error: Parent task ID is missing for creating subtask.");
@@ -96,26 +115,28 @@ export function TaskEditDialog({
         labels: selectedLabels,
         subtasks: [],
       };
-      addSubtask(sectionId, parentId, newSubtask);
+      addTask(newSubtask, parentId); // Call addTask with parentId
+    } else if (mode === "createRootTask") {
+      // For creating a root task, parentId will be undefined (or explicitly null from store if desired)
+      const newRootTask: Task = {
+        id: crypto.randomUUID(),
+        title: title.trim(),
+        notes: notes.trim(),
+        completed: false,
+        labels: selectedLabels,
+        subtasks: [],
+      };
+      addTask(newRootTask, undefined); // Pass undefined or null for parentId to signify root
     }
     onOpenChange(false);
-  }, [
-    title,
-    notes,
-    selectedLabels,
-    mode,
-    task,
-    sectionId,
-    parentId,
-    onOpenChange,
-  ]);
+  }, [title, notes, selectedLabels, mode, task, parentId, onOpenChange]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[525px] rounded-xl bg-card">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">
-            {mode === "edit" ? "Edit Task" : "Create New Subtask"}
+            {dialogTitleText}
           </DialogTitle>
         </DialogHeader>
         <form
@@ -134,7 +155,7 @@ export function TaskEditDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="col-span-3"
-              placeholder="Task title"
+              placeholder={titleInputPlaceholder}
               autoFocus
               required
               maxLength={100}
@@ -190,9 +211,7 @@ export function TaskEditDialog({
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit">
-              {mode === "edit" ? "Save Changes" : "Create Subtask"}
-            </Button>
+            <Button type="submit">{submitButtonText}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

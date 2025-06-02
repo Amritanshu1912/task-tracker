@@ -1,10 +1,11 @@
 // lib/store.ts
 import { create } from "zustand"
 import { subscribeWithSelector } from "zustand/middleware"
-import type { Task, TaskStore, SectionId, TaskSectionData, RawTaskData, StatusFilterState } from "@/lib/types"
+import type { Task, TaskStore, RawTaskData, StatusFilterState } from "@/lib/types"
 import { initialTasksData } from "@/lib/initial-data"
 
 // --- Helper Functions ---
+// convertRawToFullTask remains the same, it works with recursive RawTaskData
 function convertRawToFullTask(rawData: RawTaskData): Task {
   return {
     id: rawData.id || crypto.randomUUID(),
@@ -13,87 +14,171 @@ function convertRawToFullTask(rawData: RawTaskData): Task {
     completed: typeof rawData.completed === "boolean" ? rawData.completed : false,
     labels: Array.isArray(rawData.labels) ? rawData.labels : [],
     subtasks: Array.isArray(rawData.subtasks) ? rawData.subtasks.map(convertRawToFullTask) : [],
-  }
+  };
 }
 
-// Optimized recursive functions with memoization
+// memoizedSetCompletionRecursive remains useful for cascading completion
 const memoizedSetCompletionRecursive = (() => {
-  const cache = new Map()
+  const cache = new Map();
   return function setCompletionRecursive(task: Task, completed: boolean): Task {
-    const cacheKey = `${task.id}-${completed}`
-    if (cache.has(cacheKey)) return cache.get(cacheKey)
-
+    const cacheKey = `${task.id}-${completed}`;
+    if (cache.has(cacheKey)) return cache.get(cacheKey);
     const result = {
       ...task,
       completed,
       subtasks: (task.subtasks || []).map((subtask) => setCompletionRecursive(subtask, completed)),
-    }
+    };
+    if (cache.size > 1000) { const keys = Array.from(cache.keys()); cache.delete(keys[0]); }
+    cache.set(cacheKey, result);
+    return result;
+  };
+})();
 
-    // Limit cache size to prevent memory leaks
-    if (cache.size > 1000) {
-      const keys = Array.from(cache.keys())
-      cache.delete(keys[0]) // Remove oldest entry
-    }
-
-    cache.set(cacheKey, result)
-    return result
-  }
-})()
-
+// areAllSubtasksCompleted remains useful for parent completion updates
 function areAllSubtasksCompleted(task: Task): boolean {
-  if (!task.subtasks || task.subtasks.length === 0) return true
-  return task.subtasks.every((subtask) => subtask.completed)
+  if (!task.subtasks || task.subtasks.length === 0) return true; // No subtasks means "all" are complete for this check
+  return task.subtasks.every((subtask) => subtask.completed && areAllSubtasksCompleted(subtask)); // Recursive check
 }
 
-function updateStats(sections: Record<string, TaskSectionData>) {
-  let completed = 0
-  let total = 0
-
-  // Optimized counting function that avoids excessive recursion
+// updateStats now works on a single array of root tasks
+function updateStats(rootTasks: Task[]) {
+  let completed = 0;
+  let total = 0;
   const countTasksRecursive = (tasks: Task[]) => {
-    const stack = [...tasks]
-    while (stack.length > 0) {
-      const task = stack.pop()
-      if (!task) continue
-
-      total++
-      if (task.completed) completed++
-
+    for (const task of tasks) {
+      total++;
+      if (task.completed) completed++;
       if (task.subtasks && task.subtasks.length > 0) {
-        stack.push(...task.subtasks)
+        countTasksRecursive(task.subtasks);
       }
     }
-  }
-
-  Object.values(sections).forEach((section) => {
-    if (section && section.tasks) {
-      countTasksRecursive(section.tasks)
-    }
-  })
-
-  const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
-  return { completed, total, percentage }
+  };
+  countTasksRecursive(rootTasks);
+  const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+  return { completed, total, percentage };
 }
+
+// --- Recursive Task Manipulation Helpers ---
+// These helpers will operate on a task tree (array of tasks)
+function findTaskRecursive(tasks: Task[], taskId: string): Task | null {
+  for (const task of tasks) {
+    if (task.id === taskId) return task;
+    if (task.subtasks && task.subtasks.length > 0) {
+      const found = findTaskRecursive(task.subtasks, taskId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// Helper to update a task anywhere in the tree
+function updateTaskInTree(tasks: Task[], taskId: string, fieldsToUpdate: Partial<Task>): { updatedTasks: Task[], taskModified: boolean } {
+  let taskModified = false;
+  const updatedTasks = tasks.map(task => {
+    if (task.id === taskId) {
+      taskModified = true;
+      let updatedTask = { ...task, ...fieldsToUpdate };
+      if (typeof fieldsToUpdate.completed === 'boolean') {
+        updatedTask = memoizedSetCompletionRecursive(updatedTask, fieldsToUpdate.completed);
+      }
+      return updatedTask;
+    }
+    if (task.subtasks && task.subtasks.length > 0) {
+      // Pass taskId and fieldsToUpdate, no specific parentId needed for finding child to update
+      const subResult = updateTaskInTree(task.subtasks, taskId, fieldsToUpdate);
+      if (subResult.taskModified) {
+        taskModified = true;
+        let newParentTask = { ...task, subtasks: subResult.updatedTasks };
+        if (fieldsToUpdate.completed !== undefined) {
+          const allSubsComplete = areAllSubtasksCompleted(newParentTask);
+          if (newParentTask.completed !== allSubsComplete) {
+            newParentTask.completed = allSubsComplete;
+          }
+        }
+        return newParentTask;
+      }
+    }
+    return task;
+  });
+  return { updatedTasks, taskModified };
+}
+
+
+// Helper to add a subtask to a specific parent in the tree
+function addSubtaskToParent(tasks: Task[], parentTaskId: string, subtask: Task): { updatedTasks: Task[], subtaskAdded: boolean } {
+  let subtaskAdded = false;
+  const updatedTasks = tasks.map(task => {
+    if (task.id === parentTaskId) {
+      subtaskAdded = true;
+      return { ...task, subtasks: [...(task.subtasks || []), subtask], completed: false }; // Adding a subtask makes parent active
+    }
+    if (task.subtasks && task.subtasks.length > 0) {
+      const subResult = addSubtaskToParent(task.subtasks, parentTaskId, subtask);
+      if (subResult.subtaskAdded) {
+        subtaskAdded = true;
+        return { ...task, subtasks: subResult.updatedTasks, completed: false }; // Also mark this ancestor active
+      }
+    }
+    return task;
+  });
+  return { updatedTasks, subtaskAdded };
+}
+
+// Helper to delete a task from the tree
+function deleteTaskFromTree(tasks: Task[], taskId: string): { updatedTasks: Task[], taskDeleted: boolean } {
+  let taskDeleted = false;
+  const remainingTasks = tasks.filter(task => {
+    if (task.id === taskId) {
+      taskDeleted = true;
+      return false;
+    }
+    return true;
+  }).map(task => {
+    if (task.subtasks && task.subtasks.length > 0) {
+      // Pass taskId, no specific parentId needed for finding child to delete
+      const subResult = deleteTaskFromTree(task.subtasks, taskId);
+      if (subResult.taskDeleted) {
+        taskDeleted = true;
+        let newParentTask = { ...task, subtasks: subResult.updatedTasks };
+        newParentTask.completed = areAllSubtasksCompleted(newParentTask);
+        return newParentTask;
+      }
+    }
+    return task;
+  });
+  return { updatedTasks: remainingTasks, taskDeleted };
+}
+
+
+// Helper to add a label to a task
+function addLabelToTaskInTree(tasks: Task[], taskId: string, label: string): { updatedTasks: Task[], labelAdded: boolean } {
+  let labelAdded = false;
+  const updatedTasks = tasks.map(task => {
+    if (task.id === taskId) {
+      if (!task.labels.includes(label)) {
+        labelAdded = true;
+        return { ...task, labels: [...task.labels, label] };
+      }
+      return task;
+    }
+    if (task.subtasks && task.subtasks.length > 0) {
+      // Pass taskId, no specific parentId needed for finding child to label
+      const subResult = addLabelToTaskInTree(task.subtasks, taskId, label);
+      if (subResult.labelAdded) {
+        labelAdded = true;
+        return { ...task, subtasks: subResult.updatedTasks };
+      }
+    }
+    return task;
+  });
+  return { updatedTasks, labelAdded };
+}
+
 
 // --- Zustand Store with standard approach ---
 export const useTaskStore = create<TaskStore>()(
   subscribeWithSelector((set, get) => ({
-    sections: {
-      "public-section": {
-        title: "Public (Consumer) Endpoints & Frontend Features",
-        icon: "🌐",
-        description:
-          "This section details the functionalities accessible to general users, covering product browsing, cart management, and order viewing.",
-        tasks: [],
-      },
-      "admin-section": {
-        title: "Admin Endpoints & Frontend Features",
-        icon: "⚙️",
-        description:
-          "This section covers the functionalities for managing products, categories, and orders by administrators.",
-        tasks: [],
-      },
-    },
+    tasks: [], // Initialize with an empty array of tasks
     stats: { completed: 0, total: 0, percentage: 0 },
     activeLabelFilters: [],
     activeStatusFilter: null,
@@ -129,343 +214,115 @@ export const useTaskStore = create<TaskStore>()(
       })),
 
     maxVisibleDepth: null,
-    visibilityActionTrigger: 0,
-
     setMaxVisibleDepth: (depth: number | null) =>
       set((state) => ({
         maxVisibleDepth: depth,
         visibilityActionTrigger: state.visibilityActionTrigger + 1, // Increment trigger
       })),
+    visibilityActionTrigger: 0,
+
     // --- Task/Section Actions ---
-    updateTask: (sectionId, taskId, fieldsToUpdate, parentId) => {
+    addTask: (newTask, parentId) => {
       set((state) => {
-        if (!state.sections[sectionId]) {
-          console.error(`Section ${sectionId} not found in updateTask`)
-          return state
+        let newTasksTree;
+        if (!parentId) { // Add as a root task
+          newTasksTree = [...state.tasks, newTask];
+        } else { // Add as a subtask
+          const result = addSubtaskToParent(state.tasks, parentId, newTask);
+          newTasksTree = result.subtaskAdded ? result.updatedTasks : state.tasks; // Only update if added
         }
-
-        const newSections = { ...state.sections }
-        let taskTreeModified = false
-
-        // Optimized update function using a non-recursive approach
-        const updateTaskInTree = (tasks: Task[], currentParentId?: string): Task[] => {
-          return tasks.map((task) => {
-            // Direct match for the task we want to update
-            if (task.id === taskId && currentParentId === parentId) {
-              taskTreeModified = true
-
-              // Apply updates
-              const updatedTask = { ...task, ...fieldsToUpdate }
-
-              // Handle completion status propagation
-              if (typeof fieldsToUpdate.completed === "boolean") {
-                return memoizedSetCompletionRecursive(updatedTask, fieldsToUpdate.completed)
-              }
-
-              return updatedTask
-            }
-
-            // Check subtasks if they exist
-            if (task.subtasks && task.subtasks.length > 0) {
-              const updatedSubtasks = updateTaskInTree(task.subtasks, task.id)
-
-              // Check if we need to update parent completion status
-              const allSubsComplete = areAllSubtasksCompleted({ ...task, subtasks: updatedSubtasks })
-
-              return {
-                ...task,
-                subtasks: updatedSubtasks,
-                completed: task.completed !== allSubsComplete ? allSubsComplete : task.completed,
-              }
-            }
-
-            return task
-          })
-        }
-
-        newSections[sectionId] = {
-          ...newSections[sectionId],
-          tasks: updateTaskInTree(newSections[sectionId].tasks),
-        }
-
-        // Only update stats if the task tree was modified
-        const newStats = taskTreeModified ? updateStats(newSections) : state.stats
-
         return {
-          sections: newSections,
-          stats: newStats,
-        }
-      })
+          tasks: newTasksTree,
+          stats: updateStats(newTasksTree),
+        };
+      });
     },
 
-    addTaskToSection: (sectionId, task) => {
+    updateTask: (taskId, fieldsToUpdate) => {
       set((state) => {
-        if (!state.sections[sectionId]) {
-          console.error(`Section ${sectionId} not found in addTaskToSection`)
-          return state
+        const result = updateTaskInTree(state.tasks, taskId, fieldsToUpdate);
+        if (result.taskModified) {
+          return {
+            tasks: result.updatedTasks,
+            stats: updateStats(result.updatedTasks),
+          };
         }
-
-        const newSections = {
-          ...state.sections,
-          [sectionId]: {
-            ...state.sections[sectionId],
-            tasks: [...state.sections[sectionId].tasks, task],
-          },
-        }
-
-        return {
-          sections: newSections,
-          stats: updateStats(newSections),
-        }
-      })
+        return state;
+      });
     },
 
-    addSection: (sectionId, section) => {
+    deleteTask: (taskId) => { // parentId is for context
       set((state) => {
-        const newSections = {
-          ...state.sections,
-          [sectionId]: section,
+        const result = deleteTaskFromTree(state.tasks, taskId);
+        if (result.taskDeleted) {
+          return {
+            tasks: result.updatedTasks,
+            stats: updateStats(result.updatedTasks),
+          };
         }
-
-        return {
-          sections: newSections,
-          stats: updateStats(newSections),
-        }
-      })
+        return state;
+      });
     },
 
-    addSubtask: (sectionId, parentTaskId, subtaskData) => {
+    addLabelToTask: (taskId, label) => { // parentId for context
       set((state) => {
-        if (!state.sections[sectionId]) {
-          console.error(`Section ${sectionId} not found in addSubtask.`)
-          return state
+        const result = addLabelToTaskInTree(state.tasks, taskId, label);
+        if (result.labelAdded) {
+          return { tasks: result.updatedTasks }; // Stats don't change for adding a label
         }
-
-        const newSections = { ...state.sections }
-
-        // Optimized non-recursive approach to find and add subtask
-        const findAndAddSubtask = (tasks: Task[]): Task[] => {
-          return tasks.map((task) => {
-            if (task.id === parentTaskId) {
-              return {
-                ...task,
-                subtasks: [...(task.subtasks || []), subtaskData],
-              }
-            }
-
-            if (task.subtasks && task.subtasks.length > 0) {
-              return {
-                ...task,
-                subtasks: findAndAddSubtask(task.subtasks),
-              }
-            }
-
-            return task
-          })
-        }
-
-        newSections[sectionId] = {
-          ...newSections[sectionId],
-          tasks: findAndAddSubtask(newSections[sectionId].tasks),
-        }
-
-        return {
-          sections: newSections,
-          stats: updateStats(newSections),
-        }
-      })
-    },
-
-    deleteTask: (sectionId, taskId, parentId) => {
-      set((state) => {
-        if (!state.sections[sectionId]) {
-          console.error(`Section ${sectionId} not found in deleteTask.`)
-          return state
-        }
-
-        const newSections = { ...state.sections }
-
-        if (!parentId) {
-          // Top-level task deletion
-          newSections[sectionId] = {
-            ...newSections[sectionId],
-            tasks: newSections[sectionId].tasks.filter((task) => task.id !== taskId),
-          }
-        } else {
-          // Nested task deletion using iterative approach
-          const deleteNestedTask = (tasks: Task[]): Task[] => {
-            return tasks.map((task) => {
-              if (task.id === parentId) {
-                return {
-                  ...task,
-                  subtasks: (task.subtasks || []).filter((st) => st.id !== taskId),
-                }
-              }
-
-              if (task.subtasks && task.subtasks.length > 0) {
-                return {
-                  ...task,
-                  subtasks: deleteNestedTask(task.subtasks),
-                }
-              }
-
-              return task
-            })
-          }
-
-          newSections[sectionId] = {
-            ...newSections[sectionId],
-            tasks: deleteNestedTask(newSections[sectionId].tasks),
-          }
-        }
-
-        return {
-          sections: newSections,
-          stats: updateStats(newSections),
-        }
-      })
-    },
-
-    addLabelToTask: (sectionId, taskId, label, parentId) => {
-      set((state) => {
-        if (!state.sections[sectionId]) {
-          console.error(`Section ${sectionId} not found in addLabelToTask.`)
-          return state
-        }
-
-        const newSections = { ...state.sections }
-
-        // Optimized approach to add label to task
-        const addLabelToTaskInTree = (tasks: Task[]): Task[] => {
-          return tasks.map((task) => {
-            if (task.id === taskId && (!parentId || parentId === undefined)) {
-              const newLabels = task.labels || []
-              if (!newLabels.includes(label)) {
-                return {
-                  ...task,
-                  labels: [...newLabels, label],
-                }
-              }
-              return task
-            }
-
-            if (task.id === parentId) {
-              return {
-                ...task,
-                subtasks: (task.subtasks || []).map((subtask) => {
-                  if (subtask.id === taskId) {
-                    const newLabels = subtask.labels || []
-                    if (!newLabels.includes(label)) {
-                      return {
-                        ...subtask,
-                        labels: [...newLabels, label],
-                      }
-                    }
-                  }
-                  return subtask
-                }),
-              }
-            }
-
-            if (task.subtasks && task.subtasks.length > 0) {
-              return {
-                ...task,
-                subtasks: addLabelToTaskInTree(task.subtasks),
-              }
-            }
-
-            return task
-          })
-        }
-
-        newSections[sectionId] = {
-          ...newSections[sectionId],
-          tasks: addLabelToTaskInTree(newSections[sectionId].tasks),
-        }
-
-        return { sections: newSections }
-      })
+        return state;
+      });
     },
 
     loadInitialData: () => {
-      const savedData = localStorage.getItem("taskTrackerProgress_v3")
-      let dataToLoadProcessed = false
-
-      if (savedData) {
+      const savedDataString = localStorage.getItem("taskTrackerProgress_v3");
+      if (savedDataString) {
         try {
-          const parsedJson = JSON.parse(savedData)
-          if (
-            parsedJson &&
-            typeof parsedJson.sections === "object" &&
-            parsedJson.sections !== null &&
-            !Array.isArray(parsedJson.sections)
-          ) {
-            set((state) => {
-              const newSections = { ...state.sections }
-              const sectionIds = Object.keys(parsedJson.sections) as SectionId[]
-
-              for (const sectionId of sectionIds) {
-                const sectionFromStorage = parsedJson.sections[sectionId]
-
-                if (newSections[sectionId] && sectionFromStorage && Array.isArray(sectionFromStorage.tasks)) {
-                  newSections[sectionId] = {
-                    ...newSections[sectionId],
-                    title: sectionFromStorage.title || newSections[sectionId].title,
-                    icon: sectionFromStorage.icon || newSections[sectionId].icon,
-                    description: sectionFromStorage.description || newSections[sectionId].description,
-                    tasks: sectionFromStorage.tasks.map(convertRawToFullTask),
-                  }
-                }
-              }
-
-              return {
-                sections: newSections,
-                stats: updateStats(newSections),
-              }
-            })
-
-            dataToLoadProcessed = true
+          const savedData = JSON.parse(savedDataString);
+          // Expecting savedData to have a 'tasks' array and potentially UI preferences
+          if (savedData && Array.isArray(savedData.tasks)) {
+            const loadedTasks = savedData.tasks.map(convertRawToFullTask);
+            set({
+              tasks: loadedTasks,
+              stats: updateStats(loadedTasks),
+              activeLabelFilters: Array.isArray(savedData.activeLabelFilters) ? savedData.activeLabelFilters : [],
+              activeStatusFilter: ['active', 'completed', null].includes(savedData.activeStatusFilter) ? savedData.activeStatusFilter : null,
+              isSidebarOpen: typeof savedData.isSidebarOpen === 'boolean' ? savedData.isSidebarOpen : true,
+              maxVisibleDepth: typeof savedData.maxVisibleDepth === 'number' || savedData.maxVisibleDepth === null ? savedData.maxVisibleDepth : null,
+              areAllNotesCollapsed: typeof savedData.areAllNotesCollapsed === 'boolean' ? savedData.areAllNotesCollapsed : false,
+            });
+            return; // Loaded from localStorage
           }
         } catch (e) {
-          console.error("Error parsing or processing data from localStorage:", e)
+          console.error("Error parsing data from localStorage:", e);
+          localStorage.removeItem("taskTrackerProgress_v3"); // Clear corrupted data
         }
       }
-
-      if (!dataToLoadProcessed) {
-        set((state) => {
-          const newSections = { ...state.sections }
-          const sectionKeys = Object.keys(initialTasksData) as SectionId[]
-
-          for (const sectionKey of sectionKeys) {
-            if (newSections[sectionKey]) {
-              newSections[sectionKey] = {
-                ...newSections[sectionKey],
-                tasks: initialTasksData[sectionKey].map(convertRawToFullTask),
-              }
-            }
-          }
-
-          return {
-            sections: newSections,
-            stats: updateStats(newSections),
-          }
-        })
-      }
+      // Fallback to initialTasksData if no valid localStorage data
+      const tasksFromInitial = initialTasksData.map(convertRawToFullTask);
+      set({
+        tasks: tasksFromInitial,
+        stats: updateStats(tasksFromInitial),
+        // Set default UI preferences as well
+        activeLabelFilters: [],
+        activeStatusFilter: null,
+        isSidebarOpen: true,
+        maxVisibleDepth: null,
+        areAllNotesCollapsed: false,
+      });
     },
 
     saveToLocalStorage: () => {
-      const state = get()
-      const sectionsToSave: Record<SectionId, TaskSectionData> = {} as Record<SectionId, TaskSectionData>
-        ; (Object.keys(state.sections) as SectionId[]).forEach((sectionId) => {
-          sectionsToSave[sectionId] = {
-            title: state.sections[sectionId].title,
-            icon: state.sections[sectionId].icon,
-            description: state.sections[sectionId].description,
-            tasks: state.sections[sectionId].tasks,
-          }
-        })
-
-      localStorage.setItem("taskTrackerProgress_v3", JSON.stringify({ sections: sectionsToSave }))
+      const state = get();
+      const dataToSave = {
+        tasks: state.tasks, // Save the full task objects
+        activeLabelFilters: state.activeLabelFilters,
+        activeStatusFilter: state.activeStatusFilter,
+        isSidebarOpen: state.isSidebarOpen,
+        maxVisibleDepth: state.maxVisibleDepth,
+        areAllNotesCollapsed: state.areAllNotesCollapsed,
+      };
+      localStorage.setItem("taskTrackerProgress_v3", JSON.stringify(dataToSave));
     },
   })),
 )
