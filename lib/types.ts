@@ -46,6 +46,7 @@ export interface TaskStore {
 
   maxVisibleDepth: number | null
   setMaxVisibleDepth: (depth: number | null) => void
+  visibilityActionTrigger: number
 
   // Task/section actions
   updateTask: (sectionId: string, taskId: string, fieldsToUpdate: Partial<Task>, parentId?: string) => void

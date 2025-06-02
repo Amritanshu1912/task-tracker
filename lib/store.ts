@@ -129,8 +129,13 @@ export const useTaskStore = create<TaskStore>()(
       })),
 
     maxVisibleDepth: null,
-    setMaxVisibleDepth: (depth: number | null) => set(() => ({ maxVisibleDepth: depth })),
+    visibilityActionTrigger: 0,
 
+    setMaxVisibleDepth: (depth: number | null) =>
+      set((state) => ({
+        maxVisibleDepth: depth,
+        visibilityActionTrigger: state.visibilityActionTrigger + 1, // Increment trigger
+      })),
     // --- Task/Section Actions ---
     updateTask: (sectionId, taskId, fieldsToUpdate, parentId) => {
       set((state) => {

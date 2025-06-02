@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import type { Task, StatusFilterState } from "@/lib/types";
 import { useTaskStore } from "@/lib/store";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,41 +50,66 @@ export const TaskItem = memo(function TaskItem({
   const areAllNotesCollapsed = useTaskStore(
     (state) => state.areAllNotesCollapsed
   );
-  const maxVisibleDepth = useTaskStore((state) => state.maxVisibleDepth);
+  const maxVisibleDepthFromStore = useTaskStore(
+    (state) => state.maxVisibleDepth
+  );
+  const visibilityActionTrigger = useTaskStore(
+    (state) => state.visibilityActionTrigger
+  );
+
   const activeLabelFilters = useTaskStore((state) => state.activeLabelFilters);
   const activeStatusFilter = useTaskStore((state) => state.activeStatusFilter);
 
   const hasSubtasks = task.subtasks && task.subtasks.length > 0;
   const hasNotes = task.notes && task.notes.trim() !== "";
 
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    // Collapse if no subtasks or if task level exceeds max visible depth
+  const [manualCollapseOverride, setManualCollapseOverride] = useState<
+    boolean | null
+  >(null);
+
+  // Effect to reset manual override when a global action occurs
+  useEffect(() => {
+    if (hasSubtasks) {
+      // Only reset if it can be collapsed/expanded
+      setManualCollapseOverride(null);
+    }
+  }, [visibilityActionTrigger, hasSubtasks]);
+
+  const isEffectivelyCollapsed = useMemo(() => {
     if (!hasSubtasks) return true;
-    if (maxVisibleDepth !== null && level >= maxVisibleDepth) {
+
+    if (manualCollapseOverride !== null) {
+      return manualCollapseOverride;
+    }
+    // Global setting from store
+    if (
+      maxVisibleDepthFromStore !== null &&
+      level >= maxVisibleDepthFromStore
+    ) {
       return true;
     }
-    return false;
-  });
-
-  useEffect(() => {
-    // Synchronize collapse state with global max visible depth
-    if (hasSubtasks) {
-      const shouldBeGloballyCollapsed =
-        maxVisibleDepth !== null && level >= maxVisibleDepth;
-      if (isCollapsed !== shouldBeGloballyCollapsed) {
-        setIsCollapsed(shouldBeGloballyCollapsed);
-      }
-    }
-  }, [level, hasSubtasks, maxVisibleDepth, isCollapsed]);
+    return false; // Default to expanded
+  }, [hasSubtasks, manualCollapseOverride, maxVisibleDepthFromStore, level]);
 
   const handleToggleChevronCollapse = useCallback(
     (e: React.MouseEvent) => {
-      e.stopPropagation(); // Prevent event bubbling
+      e.stopPropagation();
       if (hasSubtasks) {
-        setIsCollapsed((prev) => !prev);
+        // When user clicks, set or toggle the manual override
+        setManualCollapseOverride((prevOverride) => {
+          if (prevOverride !== null) {
+            return !prevOverride; // Toggle existing manual state
+          }
+          // If no manual override, determine current state based on global and toggle that
+          const currentlyGloballyOrImplicitlyCollapsed =
+            (maxVisibleDepthFromStore !== null &&
+              level >= maxVisibleDepthFromStore) ||
+            false; // false if maxVisibleDepthFromStore is null
+          return !currentlyGloballyOrImplicitlyCollapsed;
+        });
       }
     },
-    [hasSubtasks]
+    [hasSubtasks, maxVisibleDepthFromStore, level] // Add dependencies
   );
 
   const handleToggleComplete = useCallback(
@@ -154,7 +179,7 @@ export const TaskItem = memo(function TaskItem({
     setIsEditDialogOpen(true);
   }, []);
 
-  const showSubtasks = hasSubtasks && !isCollapsed;
+  const showSubtasks = hasSubtasks && !isEffectivelyCollapsed;
 
   const taskItemClasses = cn(
     "task-item",
@@ -174,8 +199,10 @@ export const TaskItem = memo(function TaskItem({
             className="w-6 h-6 flex items-center justify-center cursor-pointer mt-1"
             onClick={handleToggleChevronCollapse}
             role="button"
-            aria-expanded={!isCollapsed && hasSubtasks}
-            aria-label={isCollapsed ? "Expand subtasks" : "Collapse subtasks"}
+            aria-expanded={!isEffectivelyCollapsed && hasSubtasks}
+            aria-label={
+              isEffectivelyCollapsed ? "Expand subtasks" : "Collapse subtasks"
+            }
             tabIndex={hasSubtasks ? 0 : -1}
             onKeyDown={(e) => {
               if (hasSubtasks && (e.key === "Enter" || e.key === " ")) {
@@ -185,7 +212,7 @@ export const TaskItem = memo(function TaskItem({
             }}
           >
             {hasSubtasks &&
-              (isCollapsed ? (
+              (isEffectivelyCollapsed ? (
                 <ChevronRight className="text-muted-foreground h-4 w-4" />
               ) : (
                 <ChevronDown className="text-muted-foreground h-4 w-4" />
