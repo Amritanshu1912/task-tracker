@@ -6,53 +6,88 @@
 @layer base {
   :root {
     /* Modern Dark Theme - Deep Space Aesthetic */
-    --background: 220 13% 9%; /* Very dark blue-gray */
-    --foreground: 220 9% 95%; /* Soft white */
+    --background: 220 13% 9%;
+    /* Very dark blue-gray */
+    --foreground: 220 9% 95%;
+    /* Soft white */
 
     /* Card & Surface Colors */
-    --card: 220 13% 11%; /* Slightly lighter than background */
-    --card-foreground: 220 9% 95%; /* Same as foreground */
+    --card: 220 13% 11%;
+    /* Slightly lighter than background */
+    --card-foreground: 220 9% 95%;
+    /* Same as foreground */
 
-    --popover: 220 13% 10%; /* Between background and card */
-    --popover-foreground: 220 9% 95%; /* Same as foreground */
+    --popover: 220 13% 10%;
+    /* Between background and card */
+    --popover-foreground: 220 9% 95%;
+    /* Same as foreground */
 
     /* Primary Accent - Electric Blue */
-    --primary: 217 91% 60%; /* Vibrant blue */
-    --primary-foreground: 220 9% 98%; /* Near white */
+    --primary: 217 91% 60%;
+    /* Vibrant blue */
+    --primary-foreground: 220 9% 98%;
+    /* Near white */
 
     /* Secondary - Muted Purple */
-    --secondary: 220 13% 16%; /* Darker surface */
-    --secondary-foreground: 220 9% 80%; /* Muted text */
+    --secondary: 220 13% 16%;
+    /* Darker surface */
+    --secondary-foreground: 220 9% 80%;
+    /* Muted text */
 
     /* Muted - Subtle Gray */
-    --muted: 220 13% 14%; /* Subtle background */
-    --muted-foreground: 220 9% 65%; /* Muted text */
+    --muted: 220 13% 14%;
+    /* Subtle background */
+    --muted-foreground: 220 9% 65%;
+    /* Muted text */
 
     /* Accent - Hover States */
-    --accent: 220 13% 18%; /* Hover background */
-    --accent-foreground: 220 9% 90%; /* Hover text */
+    --accent: 220 13% 18%;
+    /* Hover background */
+    --accent-foreground: 220 9% 90%;
+    /* Hover text */
 
     /* Destructive - Modern Red */
-    --destructive: 0 84% 60%; /* Vibrant red */
-    --destructive-foreground: 0 0% 98%; /* Near white */
+    --destructive: 0 84% 60%;
+    /* Vibrant red */
+    --destructive-foreground: 0 0% 98%;
+    /* Near white */
 
     /* Borders & Inputs */
-    --border: 220 13% 20%; /* Subtle borders */
-    --input: 220 13% 15%; /* Input backgrounds */
-    --ring: 217 91% 60%; /* Focus rings - same as primary */
+    --border: 220 13% 20%;
+    /* Subtle borders */
+    --input: 220 13% 15%;
+    /* Input backgrounds */
+    --ring: 217 91% 60%;
+    /* Focus rings - same as primary */
 
     /* Success Colors */
-    --success: 142 76% 36%; /* Modern green */
-    --success-foreground: 142 76% 90%; /* Light green text */
+    --success: 142 76% 36%;
+    /* Modern green */
+    --success-foreground: 142 76% 90%;
+    /* Light green text */
 
     /* Warning Colors */
-    --warning: 38 92% 50%; /* Amber */
-    --warning-foreground: 38 92% 95%; /* Light amber text */
+    --warning: 38 92% 50%;
+    /* Amber */
+    --warning-foreground: 38 92% 95%;
+    /* Light amber text */
 
     /* Progress Bar Gradient */
-    --progress-from: 217 91% 60%; /* Primary blue */
-    --progress-via: 142 76% 36%; /* Success green */
-    --progress-to: 38 92% 50%; /* Warning amber */
+    --progress-from: 217 91% 60%;
+    /* Primary blue */
+    --progress-via: 142 76% 36%;
+    /* Success green */
+    --progress-to: 38 92% 50%;
+    /* Warning amber */
+
+    /* Gradient Colors */
+    --progress-gradient-start: 217 91% 60%;
+    /* Electric Blue */
+    --progress-gradient-end: 264 80% 70%;
+    /* Vibrant Purple */
+
+    /* Lighter Gray for Unfilled Part */
+    --progress-track: 220 9% 25%;
 
     /* Radius */
     --radius: 0.75rem;
@@ -152,6 +187,7 @@
     transform: translateX(-100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -163,6 +199,7 @@
     transform: translateX(0);
     opacity: 1;
   }
+
   to {
     transform: translateX(-100%);
     opacity: 0;
