@@ -7,6 +7,7 @@ import { useTaskStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Zap, Save, FileDown, FileUp } from "lucide-react";
 import { exportToJson, importFromJson } from "@/lib/utils";
+import { toast } from "sonner";
 
 // Renders the application header with branding and data management buttons.
 export function AppHeader() {
@@ -14,12 +15,26 @@ export function AppHeader() {
 
   const handleSave = useCallback(() => {
     saveToLocalStorage();
-    alert("Progress saved successfully!");
+    toast.success("Progress Saved", {
+      description: "Your changes have been saved to local storage.",
+    });
   }, [saveToLocalStorage]);
 
-  // Exports the current state of sections to a JSON file.
   const handleExport = useCallback(() => {
-    exportToJson(useTaskStore.getState().sections);
+    // Construct the object to be exported, matching saveToLocalStorage structure
+    const stateToExport = {
+      tasks: useTaskStore.getState().tasks,
+      activeLabelFilters: useTaskStore.getState().activeLabelFilters,
+      activeStatusFilter: useTaskStore.getState().activeStatusFilter,
+      isSidebarOpen: useTaskStore.getState().isSidebarOpen,
+      maxVisibleDepth: useTaskStore.getState().maxVisibleDepth,
+      areAllNotesCollapsed: useTaskStore.getState().areAllNotesCollapsed,
+      // Add any other state you want to include in the export, like visibilityActionTrigger if needed
+    };
+    exportToJson(stateToExport);
+    toast.info("Data Exported", {
+      description: "Your task data has been downloaded as a JSON file.",
+    });
   }, []);
 
   // Prompts user to select a JSON file and imports it into the store.
@@ -27,10 +42,26 @@ export function AppHeader() {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".json";
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
+      // Make async to await importFromJson if it returns a promise
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        importFromJson(file);
+        try {
+          // importFromJson in utils.ts now handles its own alerts/toasts for success/failure
+          // It already reloads the page on success.
+          await importFromJson(file);
+          // No specific toast here if importFromJson handles it,
+          // or if page reload is immediate confirmation.
+          // If importFromJson doesn't show a success toast before reload:
+          // toast.success("Import Successful", { description: "Data has been imported. Page will reload."});
+          // However, importFromJson ALREADY alerts and reloads. We will modify utils.ts next.
+        } catch (error) {
+          // This catch might be redundant if importFromJson handles all errors with toasts.
+          // If importFromJson re-throws or doesn't toast for all errors:
+          // toast.error("Import Failed", {
+          //   description: error instanceof Error ? error.message : "Could not import the file.",
+          // });
+        }
       }
     };
     input.click();
@@ -60,7 +91,7 @@ export function AppHeader() {
             onClick={handleSave}
             title="Save Progress"
           >
-            <Save className="w-5 h-5 mr-2" />
+            <Save className="w-4 h-4 mr-2" />
             Save Progress
           </Button>
           <Button
@@ -69,7 +100,7 @@ export function AppHeader() {
             onClick={handleExport}
             title="Export JSON"
           >
-            <FileDown className="w-5 h-5 mr-2" />
+            <FileDown className="w-4 h-4 mr-2" />
             Export JSON
           </Button>
           <Button
@@ -78,7 +109,7 @@ export function AppHeader() {
             onClick={handleImport}
             title="Import JSON"
           >
-            <FileUp className="w-5 h-5 mr-2" />
+            <FileUp className="w-4 h-4 mr-2" />
             Import JSON
           </Button>
         </div>
