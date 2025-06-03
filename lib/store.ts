@@ -275,7 +275,7 @@ export const useTaskStore = create<TaskStore>()(
     },
 
     loadInitialData: () => {
-      const savedDataString = localStorage.getItem("taskTrackerProgress_v3");
+      const savedDataString = localStorage.getItem("taskProgressTracker_v1");
       if (savedDataString) {
         try {
           const savedData = JSON.parse(savedDataString);
@@ -295,7 +295,7 @@ export const useTaskStore = create<TaskStore>()(
           }
         } catch (e) {
           console.error("Error parsing data from localStorage:", e);
-          localStorage.removeItem("taskTrackerProgress_v3"); // Clear corrupted data
+          localStorage.removeItem("taskProgressTracker_v1"); // Clear corrupted data
         }
       }
       // Fallback to initialTasksData if no valid localStorage data
@@ -322,7 +322,7 @@ export const useTaskStore = create<TaskStore>()(
         maxVisibleDepth: state.maxVisibleDepth,
         areAllNotesCollapsed: state.areAllNotesCollapsed,
       };
-      localStorage.setItem("taskTrackerProgress_v3", JSON.stringify(dataToSave));
+      localStorage.setItem("taskProgressTracker_v1", JSON.stringify(dataToSave));
     },
   })),
 )
