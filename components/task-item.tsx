@@ -236,7 +236,7 @@ export const TaskItem = memo(function TaskItem({
                 onFocus={() => setIsEditingNotes(true)}
                 onBlur={handleNotesChange}
                 className={cn(
-                  "text-sm text-muted-foreground mt-2 outline-none rounded px-2 py-1 whitespace-pre-wrap",
+                  "text-sm text-muted-foreground outline-none rounded px-2 py-1 whitespace-pre-wrap",
                   isEditingNotes ? "bg-muted ring-1 ring-ring" : "italic",
                   task.completed && "line-through opacity-80"
                 )}
@@ -246,7 +246,7 @@ export const TaskItem = memo(function TaskItem({
             )}
 
             {task.labels.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="flex flex-wrap gap-1 mt-1">
                 {task.labels.map((label, i) => (
                   <Badge
                     key={`${label}-${i}`}
@@ -300,7 +300,7 @@ export const TaskItem = memo(function TaskItem({
                   activeLabelFilters,
                   activeStatusFilter
                 ) && (
-                  <div key={subtask.id} className="mt-3">
+                  <div key={subtask.id} className="mt-1">
                     <TaskItem
                       task={subtask}
                       taskNumber={`${taskNumber}.${index + 1}`}

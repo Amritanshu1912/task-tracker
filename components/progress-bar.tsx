@@ -44,6 +44,7 @@ export const ProgressBar = memo(function ProgressBar({
           lastScrollY.current = currentScrollY;
           ticking.current = false;
         });
+
         ticking.current = true;
       }
     };
@@ -55,15 +56,14 @@ export const ProgressBar = memo(function ProgressBar({
   return (
     <div
       className={cn(
-        "sticky top-0 z-30 transition-all duration-300 ease-out print:hidden",
-        "glass-morphism border-b border-border/50",
-        "top-[3.5rem]",
+        "w-full transition-all duration-300 ease-out print:hidden",
+        "glass-morphism border-b border-border/50 backdrop-blur-sm",
         isVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0",
-        isCompact ? "py-2" : "py-4",
+        isCompact ? "py-2" : "py-3",
         className
       )}
     >
-      <div className="container mx-auto px-4">
+      <div className="mx-auto max-w-6xl px-4">
         <div
           className={cn(
             "flex items-center gap-4 transition-all duration-300",
