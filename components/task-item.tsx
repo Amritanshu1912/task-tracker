@@ -300,7 +300,7 @@ export const TaskItem = memo(function TaskItem({
                   activeLabelFilters,
                   activeStatusFilter
                 ) && (
-                  <div key={subtask.id} className="mt-1">
+                  <div key={subtask.id} className="mt-2">
                     <TaskItem
                       task={subtask}
                       taskNumber={`${taskNumber}.${index + 1}`}

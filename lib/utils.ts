@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { toast } from "sonner"; // Or from "@/components/ui/sonner"
 
 /**
  * Utility for merging Tailwind and conditional classes.
@@ -19,7 +20,8 @@ export function exportToJson<T = unknown>(data: T) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `task-tracker-progress-${new Date().toISOString().split("T")[0]}.json`;
+  // Consider a more generic filename if the data isn't just "progress"
+  a.download = `task-data-${new Date().toISOString().split("T")[0]}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -37,20 +39,51 @@ export function importFromJson<T = unknown>(file: File): Promise<T> {
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const jsonData = JSON.parse(event.target?.result as string) as T;
-        localStorage.setItem("taskTrackerProgress_v3", JSON.stringify(jsonData));
-        // Consider replacing reload with a state update for better UX in the future
-        window.location.reload();
-        resolve(jsonData);
-      } catch (err) {
-        // In production, replace alert with a toast/snackbar for better UX
-        alert("Error parsing JSON file");
+        if (!event.target?.result) {
+          // REPLACE alert with toast.error
+          // throw new Error("File content is empty or unreadable.");
+          toast.error("Import Error", { description: "File content is empty or unreadable." });
+          reject(new Error("File content is empty or unreadable."));
+          return;
+        }
+        const jsonData = JSON.parse(event.target.result as string) as T;
+        // Ensure the jsonData is what we expect at a basic level before saving
+        // This check depends on the structure you've decided for export/import.
+        // For example, if it MUST have a 'tasks' array:
+        if (typeof jsonData === 'object' && jsonData !== null && Array.isArray((jsonData as any).tasks)) {
+          localStorage.setItem("taskProgressTracker_v1", JSON.stringify(jsonData));
+          // REPLACE alert with toast.success BEFORE reload
+          // alert("Data imported successfully! The page will now reload.");
+          toast.success("Import Successful", {
+            description: "Data has been imported. The page will reload shortly.",
+            duration: 3000, // Give user time to see it before reload
+          });
+          // Delay reload slightly to allow toast to be seen
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500); // Adjust delay as needed
+          resolve(jsonData);
+        } else {
+          const errMessage = "Imported JSON has an invalid structure.";
+          toast.error("Import Error", { description: errMessage });
+          reject(new Error(errMessage));
+        }
+      } catch (err: any) {
+        console.error("Error processing JSON file:", err);
+        // REPLACE alert with toast.error
+        // alert(`Error importing data: ${err.message || "Invalid JSON format."}`);
+        toast.error("Import Error", {
+          description: err.message || "Invalid JSON format. Check console for details.",
+        });
         reject(err);
       }
     };
-    reader.onerror = () => {
-      alert("Failed to read file. Please try again.");
-      reject(reader.error);
+    reader.onerror = (error) => {
+      console.error("Failed to read file:", reader.error);
+      // REPLACE alert with toast.error
+      // alert("Failed to read file. Please try again.");
+      toast.error("File Read Error", { description: "Failed to read the selected file." });
+      reject(reader.error || new Error("Unknown file read error."));
     };
     reader.readAsText(file);
   });
