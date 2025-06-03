@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import type { Task, StatusFilterState } from "@/lib/types";
+import { taskMatchesFilters } from "../lib/filters";
 import { useTaskStore } from "@/lib/store";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -23,11 +24,9 @@ import {
 import { TaskEditDialog } from "./task-edit-dialog";
 import { cn } from "@/lib/utils";
 import { LABEL_EMOJIS } from "@/lib/labels";
-import { taskMatchesFilters } from "./task-section";
 
 interface TaskItemProps {
   task: Task;
-  sectionId: string;
   taskNumber: string;
   parentId?: string;
   level?: number;
@@ -35,9 +34,9 @@ interface TaskItemProps {
 
 export const TaskItem = memo(function TaskItem({
   task,
-  sectionId,
+  parentId,
   taskNumber,
-  parentId: directParentIdOfThisTask,
+  parentId: directVisualParentId,
   level = 0,
 }: TaskItemProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -46,6 +45,10 @@ export const TaskItem = memo(function TaskItem({
   const [dialogMode, setDialogMode] = useState<"edit" | "createSubtask">(
     "edit"
   );
+
+  const storeUpdateTask = useTaskStore((state) => state.updateTask);
+  const storeDeleteTask = useTaskStore((state) => state.deleteTask);
+  const storeAddTask = useTaskStore((state) => state.addTask);
 
   const areAllNotesCollapsed = useTaskStore(
     (state) => state.areAllNotesCollapsed
@@ -114,47 +117,29 @@ export const TaskItem = memo(function TaskItem({
 
   const handleToggleComplete = useCallback(
     (checked: boolean) => {
-      useTaskStore
-        .getState()
-        .updateTask(
-          sectionId,
-          task.id,
-          { completed: checked },
-          directParentIdOfThisTask
-        );
+      // Call storeUpdateTask without sectionId
+      storeUpdateTask(task.id, { completed: checked });
     },
-    [sectionId, task.id, directParentIdOfThisTask]
+    [storeUpdateTask, task.id]
   );
 
   const handleTitleChange = useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
-      useTaskStore
-        .getState()
-        .updateTask(
-          sectionId,
-          task.id,
-          { title: e.target.textContent || task.title },
-          directParentIdOfThisTask
-        );
+      // Call storeUpdateTask without sectionId
+      storeUpdateTask(task.id, { title: e.target.textContent || task.title });
       setIsEditingTitle(false);
     },
-    [sectionId, task.id, task.title, directParentIdOfThisTask]
+    [storeUpdateTask, task.id, task.title]
   );
 
   const handleNotesChange = useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
       const newNotes = e.target.innerText || "";
-      useTaskStore
-        .getState()
-        .updateTask(
-          sectionId,
-          task.id,
-          { notes: newNotes },
-          directParentIdOfThisTask
-        );
-      setIsEditingNotes(false);
+      // Call storeUpdateTask without sectionId
+      storeUpdateTask(task.id, { notes: newNotes });
+      setIsEditingTitle(false);
     },
-    [sectionId, task.id, directParentIdOfThisTask]
+    [storeUpdateTask, task.id]
   );
 
   const handleDelete = useCallback(() => {
@@ -163,11 +148,9 @@ export const TaskItem = memo(function TaskItem({
         "Are you sure you want to delete this task and all its subtasks?"
       )
     ) {
-      useTaskStore
-        .getState()
-        .deleteTask(sectionId, task.id, directParentIdOfThisTask);
+      storeDeleteTask(task.id);
     }
-  }, [sectionId, task.id, directParentIdOfThisTask]);
+  }, [parentId, task.id]);
 
   const handleEditTask = useCallback(() => {
     setDialogMode("edit");
@@ -253,7 +236,7 @@ export const TaskItem = memo(function TaskItem({
                 onFocus={() => setIsEditingNotes(true)}
                 onBlur={handleNotesChange}
                 className={cn(
-                  "text-sm text-muted-foreground mt-2 outline-none rounded px-2 py-1 whitespace-pre-wrap",
+                  "text-sm text-muted-foreground outline-none rounded px-2 py-1 whitespace-pre-wrap",
                   isEditingNotes ? "bg-muted ring-1 ring-ring" : "italic",
                   task.completed && "line-through opacity-80"
                 )}
@@ -263,7 +246,7 @@ export const TaskItem = memo(function TaskItem({
             )}
 
             {task.labels.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="flex flex-wrap gap-1 mt-1">
                 {task.labels.map((label, i) => (
                   <Badge
                     key={`${label}-${i}`}
@@ -317,10 +300,9 @@ export const TaskItem = memo(function TaskItem({
                   activeLabelFilters,
                   activeStatusFilter
                 ) && (
-                  <div key={subtask.id} className="mt-3">
+                  <div key={subtask.id} className="mt-2">
                     <TaskItem
                       task={subtask}
-                      sectionId={sectionId}
                       taskNumber={`${taskNumber}.${index + 1}`}
                       parentId={task.id}
                       level={level + 1}
@@ -337,8 +319,9 @@ export const TaskItem = memo(function TaskItem({
           isOpen={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           task={dialogMode === "edit" ? task : null}
-          sectionId={sectionId}
-          parentId={dialogMode === "edit" ? directParentIdOfThisTask : task.id}
+          parentId={
+            dialogMode === "createSubtask" ? task.id : directVisualParentId
+          }
           mode={dialogMode}
         />
       )}

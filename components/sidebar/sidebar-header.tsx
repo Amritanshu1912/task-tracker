@@ -1,5 +1,4 @@
-// components/sidebar/sidebar-header.tsx
-
+// --- START OF FILE components/sidebar/sidebar-header.tsx ---
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -55,3 +54,4 @@ export function SidebarHeader({
     </div>
   );
 }
+// --- END OF FILE components/sidebar/sidebar-header.tsx ---
