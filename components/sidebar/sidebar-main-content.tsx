@@ -24,7 +24,7 @@ import type { SidebarButton as SidebarButtonType } from "../app-sidebar"; // Typ
 interface SidebarMainContentProps {
   isSidebarOpen: boolean;
   SidebarButtonComponent: typeof SidebarButtonType; // Pass the SidebarButton component
-  openAddRootTaskDialog: () => void;
+  // openAddRootTaskDialog: () => void;
 }
 
 // Local SidebarSection helper for this content area
@@ -66,13 +66,16 @@ const SidebarSection = ({
 export function SidebarMainContent({
   isSidebarOpen,
   SidebarButtonComponent,
-  openAddRootTaskDialog,
-}: SidebarMainContentProps) {
+}: // openAddRootTaskDialog,
+SidebarMainContentProps) {
   const toggleAllNotes = useTaskStore((state) => state.toggleAllNotes);
   const areAllNotesCollapsed = useTaskStore(
     (state) => state.areAllNotesCollapsed
   );
   const setMaxVisibleDepth = useTaskStore((state) => state.setMaxVisibleDepth);
+  const openAddRootTaskDialogGlobal = useTaskStore(
+    (state) => state.openAddRootTaskDialog
+  );
 
   return (
     <div
@@ -91,7 +94,7 @@ export function SidebarMainContent({
         <SidebarButtonComponent
           icon={Plus}
           label="Add New Task"
-          onClick={openAddRootTaskDialog}
+          onClick={openAddRootTaskDialogGlobal}
           isSidebarOpen={isSidebarOpen}
           tooltip="Add New Task"
         />

@@ -92,7 +92,15 @@ export function AppSidebar() {
   const stats = useTaskStore((state) => state.stats);
 
   // State for "Add Root Task" dialog, still managed here as TaskEditDialog is global
-  const [isAddRootTaskDialogOpen, setIsAddRootTaskDialogOpen] = useState(false);
+  // const [isAddRootTaskDialogOpen, setIsAddRootTaskDialogOpen] = useState(false);
+  const isAddRootTaskDialogOpen = useTaskStore(
+    (state) => state.isAddRootTaskDialogOpen
+  );
+  // We need an action to close it, typically onOpenChange for the Dialog component
+  // Let's use closeAddRootTaskDialog directly or pass a function that calls it.
+  const closeAddRootTaskDialog = useTaskStore(
+    (state) => state.closeAddRootTaskDialog
+  );
 
   return (
     <aside
@@ -116,13 +124,19 @@ export function AppSidebar() {
       <SidebarMainContent
         isSidebarOpen={isSidebarOpen}
         SidebarButtonComponent={SidebarButton} // Pass SidebarButton as a component prop
-        openAddRootTaskDialog={() => setIsAddRootTaskDialogOpen(true)}
+        // openAddRootTaskDialog={() => setIsAddRootTaskDialogOpen(true)}
       />
 
       {/* TaskEditDialog for adding root tasks remains at this top level */}
       <TaskEditDialog
         isOpen={isAddRootTaskDialogOpen}
-        onOpenChange={setIsAddRootTaskDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeAddRootTaskDialog(); // Call store action to close
+          }
+          // If you need to also handle opening via this, you'd call openAddRootTaskDialog
+          // but typically the trigger (button) calls open, and onOpenChange(false) calls close.
+        }}
         mode="createRootTask"
         parentId={undefined}
       />

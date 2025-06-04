@@ -9,6 +9,8 @@ import { useTaskStore } from "@/lib/store";
 import { AppHeader } from "@/components/app-header";
 import { ProgressBar } from "@/components/progress-bar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { EmptyStateCard } from "@/components/empty-state-card";
+
 import { cn } from "@/lib/utils";
 
 // Fallback UI displayed during initial data loading.
@@ -51,13 +53,21 @@ export default function TaskTracker() {
     return <LoadingFallback />;
   }
 
+  // Determine if the "true" empty state (no tasks at all) should be shown
+  const showTrueEmptyState = rootTasksFromStore.length === 0 && isLoaded;
+
+  // Determine if the "no matching filters" state should be shown
+  const showNoMatchFilterState =
+    !showTrueEmptyState && // Only if not in true empty state
+    isLoaded &&
+    filteredRootTasks.length === 0 &&
+    (activeLabelFilters.length > 0 || activeStatusFilter !== null);
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <AppHeader />
-
       <div className="flex flex-1 pt-16">
         <AppSidebar />
-
         <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out">
           {/* Fixed ProgressBar flush below header */}
           <div
@@ -76,41 +86,39 @@ export default function TaskTracker() {
             }}
           >
             <main className="container mx-auto py-8 px-4 max-w-6xl">
-              <div className="space-y-8">
-                {/* Suspense boundary for potential async components. */}
-                <Suspense fallback={<LoadingFallback />}>
-                  {filteredRootTasks.map((task, index) => (
-                    <TaskItem
-                      key={task.id}
-                      task={task}
-                      taskNumber={(index + 1).toString()}
-                      level={0}
-                    />
-                  ))}
-                </Suspense>
-              </div>
-
-              {/* Displays a message if no tasks are present across all sections. */}
-              {(rootTasksFromStore.length === 0 ||
-                (isLoaded &&
-                  filteredRootTasks.length === 0 &&
-                  (activeLabelFilters.length > 0 ||
-                    activeStatusFilter !== null))) && (
+              {showTrueEmptyState ? (
+                <EmptyStateCard />
+              ) : filteredRootTasks.length > 0 ? (
+                <div className="space-y-8">
+                  <Suspense fallback={<LoadingFallback />}>
+                    {filteredRootTasks.map((task, index) => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        taskNumber={(index + 1).toString()}
+                        level={0}
+                      />
+                    ))}
+                  </Suspense>
+                </div>
+              ) : showNoMatchFilterState ? (
                 <div className="text-center py-16">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                    <span className="text-2xl">📋</span>
+                    <span className="text-2xl">🚫</span>{" "}
+                    {/* Different icon for no match */}
                   </div>
                   <h3 className="text-lg font-semibold mb-2">
-                    {rootTasksFromStore.length === 0
-                      ? "No tasks yet"
-                      : "No tasks match filters"}
+                    No Tasks Match Filters
                   </h3>
                   <p className="text-muted-foreground mb-4">
-                    {rootTasksFromStore.length === 0
-                      ? "Get started by adding your first task!"
-                      : "Try adjusting your filters or add new tasks."}
+                    Try adjusting your label or status filters, or add new tasks
+                    that meet the criteria.
                   </p>
                 </div>
+              ) : (
+                // This case should ideally not be hit if showTrueEmptyState covers rootTasksFromStore.length === 0
+                // But as a fallback for any other "no tasks to show" scenario where filters are not active:
+                <EmptyStateCard /> // Or a simpler "No tasks to display" if you prefer a different message here
               )}
             </main>
           </div>

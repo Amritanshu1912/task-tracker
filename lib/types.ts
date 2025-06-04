@@ -37,6 +37,9 @@ export interface TaskStore {
   toggleAllNotes: () => void
   isSidebarOpen: boolean
   toggleSidebar: () => void
+  isAddRootTaskDialogOpen: boolean;
+  openAddRootTaskDialog: () => void;
+  closeAddRootTaskDialog: () => void;
 
   maxVisibleDepth: number | null
   setMaxVisibleDepth: (depth: number | null) => void
