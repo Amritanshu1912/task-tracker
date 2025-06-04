@@ -1,4 +1,4 @@
-// --- START OF FILE components/sidebar/sidebar-header.tsx ---
+// components/sidebar/sidebar-header.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";

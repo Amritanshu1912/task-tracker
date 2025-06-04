@@ -1,4 +1,4 @@
-// --- START OF FILE lib/filters.ts ---
+// lib/filters.ts
 import type { Task, StatusFilterState } from "./types"; // Adjust path if needed
 
 export const taskMatchesFilters = (

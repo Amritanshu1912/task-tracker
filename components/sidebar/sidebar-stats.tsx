@@ -1,4 +1,4 @@
-// --- START OF FILE components/sidebar/sidebar-stats.tsx ---
+// components/sidebar/sidebar-stats.tsx
 "use client";
 
 import { CircleCheck, Circle, Target } from "lucide-react"; // Icons for stats

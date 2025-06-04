@@ -2,7 +2,6 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import type { TaskStore, RawTaskData } from "@/lib/types";
-import { initialTasksData } from "@/lib/initial-data";
 import { throttle } from "lodash-es";
 import { toast } from "sonner";
 
@@ -126,12 +125,15 @@ export const useTaskStore = create<TaskStore>()(
         }
       }
       if (!loadedSuccessfully) {
-        const tasksFromInitial = (initialTasksData as RawTaskData[]).map(convertRawToFullTask);
         set({
-          tasks: tasksFromInitial,
-          stats: calculateStats(tasksFromInitial),
-          activeLabelFilters: [], activeStatusFilter: null, isSidebarOpen: true,
-          maxVisibleDepth: null, areAllNotesCollapsed: false, visibilityActionTrigger: 0,
+          tasks: [], // Default to an empty array for tasks
+          stats: calculateStats([]), // Calculate stats for empty tasks (will be 0s)
+          activeLabelFilters: [],
+          activeStatusFilter: null,
+          isSidebarOpen: true, // Sensible default for sidebar
+          maxVisibleDepth: null,
+          areAllNotesCollapsed: false,
+          visibilityActionTrigger: 0,
           isAddRootTaskDialogOpen: false,
         });
       }

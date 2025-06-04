@@ -1,3 +1,4 @@
+// components/header.tsx
 export function Header() {
   return (
     <div className="bg-card border-b border-border">

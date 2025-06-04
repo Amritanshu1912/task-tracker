@@ -1,4 +1,4 @@
-// --- START OF FILE components/app-sidebar.tsx ---
+// components/app-sidebar.tsx
 "use client";
 
 import type React from "react";
