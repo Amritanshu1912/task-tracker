@@ -20,8 +20,20 @@ export function exportToJson<T = unknown>(data: T) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  // Consider a more generic filename if the data isn't just "progress"
-  a.download = `task-data-${new Date().toISOString().split("T")[0]}.json`;
+
+  // --- MODIFICATION START ---
+  const now = new Date();
+  const datePart = now.toISOString().split("T")[0]; // YYYY-MM-DD
+  // Get time parts: HH-MM-SS
+  // Pad single digit minutes/seconds with a leading zero
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const timePart = `${hours}-${minutes}-${seconds}`;
+
+  a.download = `task-data-${datePart}_${timePart}.json`; // e.g., task-data-2023-10-27_14-30-55.json
+  // --- MODIFICATION END ---
+
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
