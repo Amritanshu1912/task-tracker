@@ -47,20 +47,15 @@ export function AppHeader() {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         try {
-          // importFromJson in utils.ts now handles its own alerts/toasts for success/failure
-          // It already reloads the page on success.
           await importFromJson(file);
-          // No specific toast here if importFromJson handles it,
-          // or if page reload is immediate confirmation.
-          // If importFromJson doesn't show a success toast before reload:
-          // toast.success("Import Successful", { description: "Data has been imported. Page will reload."});
-          // However, importFromJson ALREADY alerts and reloads. We will modify utils.ts next.
         } catch (error) {
-          // This catch might be redundant if importFromJson handles all errors with toasts.
-          // If importFromJson re-throws or doesn't toast for all errors:
-          // toast.error("Import Failed", {
-          //   description: error instanceof Error ? error.message : "Could not import the file.",
-          // });
+          toast.error("Import Failed", {
+            description:
+              error instanceof Error
+                ? error.message
+                : "Could not import the file.",
+          });
+          console.error("Import initiation failed or was rejected:", error);
         }
       }
     };

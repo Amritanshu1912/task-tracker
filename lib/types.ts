@@ -27,6 +27,7 @@ export interface TaskStore {
   areAllNotesCollapsed: boolean
   activeLabelFilters: string[]
   activeStatusFilter: StatusFilterState;
+  _isInitializing_internal?: boolean;
 
   // Label filter actions
   toggleLabelFilter: (label: string) => void
@@ -41,6 +42,9 @@ export interface TaskStore {
   openAddRootTaskDialog: () => void;
   closeAddRootTaskDialog: () => void;
 
+  pauseAutoSave: () => void;
+  resumeAutoSave: (triggerImmediateSave?: boolean) => void;
+
   maxVisibleDepth: number | null
   setMaxVisibleDepth: (depth: number | null) => void
   visibilityActionTrigger: number
@@ -53,6 +57,7 @@ export interface TaskStore {
 
   loadInitialData: () => void
   saveToLocalStorage: () => void
+  dangerouslyOverwriteState: (importedData: any) => void;
 }
 
 // RawTaskData is used for initial data loading and import/export
