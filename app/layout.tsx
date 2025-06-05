@@ -8,11 +8,11 @@ import { ThemeProvider } from "@/components/theme-provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Task Tracker - E-commerce Platform",
-  description: "Interactive development roadmap for e-commerce platform",
+  title: "Progress Tracker",
+  description:
+    "Track progress of your heirarchial tasks interactively for your projects",
   keywords: [
     "task tracker",
-    "e-commerce platform",
     "development roadmap",
     "project management",
     "interactive tasks",
