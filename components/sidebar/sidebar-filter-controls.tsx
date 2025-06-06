@@ -65,7 +65,9 @@ export function SidebarFilterControls({
       {/* Label Filters Section */}
       <div className="flex items-center justify-between h-7 mb-1.5">
         <span className="text-[13px] font-medium text-muted-foreground">
-          Labels ({activeLabelFilters.length} active)
+          Labels
+          {activeLabelFilters.length > 0 &&
+            `(${activeLabelFilters.length} active)`}
         </span>
         {activeLabelFilters.length > 0 && (
           <Button
