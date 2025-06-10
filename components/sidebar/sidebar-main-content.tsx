@@ -1,61 +1,124 @@
 // components/sidebar/sidebar-main-content.tsx
 "use client";
 
-// import type React from "react";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
-  Layers,
   FilterIcon,
   Eye,
-  Plus,
   EyeOff,
   ChevronsUpDown,
   LayoutList,
   Layers2,
   Layers3,
+  Save,
+  FileDown,
+  FileUp,
+  DatabaseZap,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
 import { useTaskStore } from "@/lib/store";
-import { AnimatePresence, motion } from "framer-motion";
-
+import type { TaskStore as TaskStoreType } from "@/lib/types";
 import { SidebarFilterControls } from "./sidebar-filter-controls";
 import type { SidebarButton as SidebarButtonType } from "../app-sidebar";
+import { SidebarSectionProject } from "./sidebar-section-project";
+import { exportToJson, importFromJson } from "@/lib/utils";
+import { toast } from "sonner";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface SidebarMainContentProps {
   isSidebarOpen: boolean;
   SidebarButtonComponent: typeof SidebarButtonType;
 }
 
-// MODIFIED: SidebarSection now accepts SidebarButtonComponent for its icon-only mode
+interface SidebarSectionProps {
+  title?: string;
+  icon?: React.ElementType;
+  children: React.ReactNode;
+  isSidebarOpen: boolean;
+  defaultOpen?: boolean;
+  SidebarButtonComponent: typeof SidebarButtonType;
+  className?: string;
+  contentClassName?: string;
+}
+
+/**
+ * Renders a collapsible section within the sidebar.
+ * When the sidebar is collapsed, it attempts to show a representative button or icon.
+ */
 const SidebarSection = ({
   title,
   icon: Icon,
   children,
   isSidebarOpen,
   defaultOpen = true,
-  SidebarButtonComponent, // ADDED this prop
-}: {
-  title: string;
-  icon?: React.ElementType;
-  children: React.ReactNode;
-  isSidebarOpen: boolean;
-  defaultOpen?: boolean;
-  SidebarButtonComponent: typeof SidebarButtonType; // ADDED type for the prop
-}) => {
+  SidebarButtonComponent,
+  className,
+  contentClassName,
+}: SidebarSectionProps) => {
   const [isSectionContentVisible, setIsSectionContentVisible] =
     useState(defaultOpen);
 
-  const handleToggleCollapse = () => {
-    if (isSidebarOpen) {
-      setIsSectionContentVisible(!isSectionContentVisible);
+  // Handles toggling the visibility of the section content
+  const handleToggleCollapse = useCallback(() => {
+    // Only allow toggling if the sidebar is open and the section has a title
+    if (isSidebarOpen && title) {
+      setIsSectionContentVisible((prev) => !prev);
     }
-  };
+  }, [isSidebarOpen, title]);
 
+  // Render a collapsed state when the main sidebar is closed
+  if (!isSidebarOpen) {
+    // Find the first SidebarButton child to display when collapsed
+    const firstButtonChild = React.Children.toArray(children).find(
+      (child) =>
+        React.isValidElement(child) && child.type === SidebarButtonComponent
+    );
+
+    if (Icon && title) {
+      // If the section has a title and icon, display that icon as a button
+      return (
+        <div
+          className={cn(
+            "flex flex-col items-center justify-center mb-2",
+            className
+          )}
+        >
+          <SidebarButtonComponent
+            icon={Icon}
+            label="" // Label is empty as only icon is shown
+            onClick={() => useTaskStore.getState().toggleSidebar()} // Click to open sidebar
+            isSidebarOpen={false}
+            tooltip={title} // Tooltip provides context
+          />
+        </div>
+      );
+    } else if (firstButtonChild && React.isValidElement(firstButtonChild)) {
+      // If no icon/title, render the first SidebarButton child (adapted for collapsed state)
+      return (
+        <div
+          className={cn(
+            "flex flex-col items-center justify-center mb-2",
+            className
+          )}
+        >
+          {React.cloneElement(firstButtonChild as React.ReactElement<any>, {
+            isSidebarOpen: false, // Ensure the cloned button is also in collapsed state
+          })}
+        </div>
+      );
+    }
+    return null; // Don't render anything if no appropriate collapsed representation
+  }
+
+  // Render expanded section when the sidebar is open
   return (
-    <div className={cn("space-y-1", isSidebarOpen ? "mb-1" : "mb-2")}>
+    <div
+      className={cn("space-y-1", isSidebarOpen ? "mb-1" : "mb-2", className)}
+    >
+      {/* Section header with title and collapse toggle */}
       {isSidebarOpen && title && (
         <div
           className="flex items-center justify-between gap-2 h-7 mb-1 cursor-pointer group rounded-md hover:bg-accent/50 px-1 -mx-1"
@@ -87,107 +150,131 @@ const SidebarSection = ({
         </div>
       )}
 
+      {/* Animated content area for the section */}
       {isSidebarOpen && (
         <AnimatePresence initial={false}>
           {isSectionContentVisible && (
             <motion.div
               key="content"
-              id={`sidebar-section-content-${title
-                .replace(/\s+/g, "-")
-                .toLowerCase()}`}
+              id={
+                title
+                  ? `sidebar-section-content-${title
+                      .replace(/\s+/g, "-")
+                      .toLowerCase()}`
+                  : undefined
+              }
               initial="collapsed"
               animate="open"
               exit="collapsed"
               variants={{
-                open: { opacity: 1, height: "auto", marginTop: "0.125rem" },
+                open: {
+                  opacity: 1,
+                  height: "auto",
+                  marginTop: title ? "0.125rem" : "0",
+                },
                 collapsed: { opacity: 0, height: 0, marginTop: "0" },
               }}
               transition={{ duration: 0.2, ease: [0.04, 0.62, 0.23, 0.98] }}
-              className="overflow-hidden"
+              className={cn("overflow-hidden", contentClassName)}
             >
-              <div className={"space-y-1.5"}>
-                {" "}
-                {/* Content has consistent spacing when open */}
+              <div
+                className={cn(
+                  isSidebarOpen && title ? "space-y-1.5" : "space-y-1"
+                )}
+              >
                 {children}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       )}
-
-      {!isSidebarOpen && (
-        <div className="flex flex-col items-center justify-center">
-          {/* Logic for icon-only display.
-                If the section is 'Filters', show a specific FilterIcon button.
-                Otherwise, try to render the first child if it's a SidebarButtonComponent.
-            */}
-          {title === "Filters" && Icon ? ( // Special handling for Filters icon
-            <SidebarButtonComponent
-              icon={Icon} // Use the section's defined icon
-              label=""
-              onClick={() => useTaskStore.getState().toggleSidebar()} // Example: open sidebar
-              isSidebarOpen={false}
-              tooltip={title} // Use section title as tooltip
-            />
-          ) : (
-            React.Children.map(children, (child) => {
-              if (
-                React.isValidElement(child) &&
-                child.type === SidebarButtonComponent
-              ) {
-                return React.cloneElement(child as React.ReactElement<any>, {
-                  isSidebarOpen: false,
-                });
-              }
-              return null;
-            })?.find(Boolean) // Find the first valid SidebarButtonComponent to render
-          )}
-        </div>
-      )}
     </div>
   );
 };
 
+/**
+ * Main content area of the sidebar, containing various sections like projects, filters, and data management.
+ */
 export function SidebarMainContent({
   isSidebarOpen,
-  SidebarButtonComponent, // This prop is correctly received here
+  SidebarButtonComponent,
 }: SidebarMainContentProps) {
-  const toggleAllNotes = useTaskStore((state) => state.toggleAllNotes);
+  // Select only the necessary state and actions from the store for optimal re-renders.
+  const toggleAllNotes = useTaskStore(
+    (state: TaskStoreType) => state.toggleAllNotes
+  );
   const areAllNotesCollapsed = useTaskStore(
-    (state) => state.areAllNotesCollapsed
+    (state: TaskStoreType) => state.areAllNotesCollapsed
   );
-  const setMaxVisibleDepth = useTaskStore((state) => state.setMaxVisibleDepth);
-  const openAddRootTaskDialogGlobal = useTaskStore(
-    (state) => state.openAddRootTaskDialog
+  const setMaxVisibleDepth = useTaskStore(
+    (state: TaskStoreType) => state.setMaxVisibleDepth
   );
+  const saveToLocalStorage = useTaskStore(
+    (state: TaskStoreType) => state.saveToLocalStorage
+  );
+  const projects = useTaskStore((state: TaskStoreType) => state.projects);
+  const activeProjectId = useTaskStore(
+    (state: TaskStoreType) => state.activeProjectId
+  );
+
+  // Callback to handle saving progress to local storage.
+  const handleSave = useCallback(() => {
+    saveToLocalStorage();
+    toast.success("Progress Saved", {
+      description: "Your changes have been saved to local storage.",
+    });
+  }, [saveToLocalStorage]);
+
+  // Callback to handle exporting the active project's data.
+  const handleExport = useCallback(() => {
+    const activeProject = projects.find((p) => p.id === activeProjectId);
+    if (!activeProject) {
+      toast.error("Export Failed", {
+        description: "No active project to export.",
+      });
+      return;
+    }
+    exportToJson({
+      projectName: activeProject.name,
+      tasks: activeProject.tasks,
+    });
+    toast.info("Active Project Exported", {
+      description: `"${activeProject.name}" data downloaded as JSON.`,
+    });
+  }, [projects, activeProjectId]);
+
+  // Callback to handle importing project data from a JSON file.
+  const handleImport = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        try {
+          await importFromJson(file); // Utility handles the state update and toasts internally
+        } catch (error) {
+          // Error handling for import initiation (e.g., user cancels file dialog)
+          console.error("Import initiation failed or was rejected:", error);
+        }
+      }
+    };
+    input.click();
+  }, []);
 
   return (
     <div
       className={cn(
-        "flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar",
-        "transition-all duration-200 ease-in-out",
-        isSidebarOpen ? "px-4 pt-2 pb-4 space-y-2" : "px-2 py-2 space-y-2"
+        "flex-1 overflow-y-auto overflow-x-hidden transition-all duration-200 ease-in-out",
+        isSidebarOpen ? "px-3 pt-2 pb-4 space-y-2" : "px-2 py-2 space-y-2"
       )}
     >
-      <SidebarSection
-        title="Manage Tasks"
-        icon={Layers}
+      <SidebarSectionProject
         isSidebarOpen={isSidebarOpen}
-        defaultOpen={true}
         SidebarButtonComponent={SidebarButtonComponent}
-      >
-        {" "}
-        {/* PASS PROP */}
-        <SidebarButtonComponent
-          icon={Plus}
-          label="Add New Task"
-          onClick={openAddRootTaskDialogGlobal}
-          isSidebarOpen={isSidebarOpen}
-          tooltip="Add New Task"
-        />
-      </SidebarSection>
+      />
 
-      {isSidebarOpen && <Separator className="my-2" />}
+      {isSidebarOpen && <Separator className="my-3" />}
 
       <SidebarSection
         title="Filters"
@@ -196,26 +283,18 @@ export function SidebarMainContent({
         defaultOpen={true}
         SidebarButtonComponent={SidebarButtonComponent}
       >
-        {" "}
-        {/* PASS PROP */}
-        {/* For Filters, the icon-only version will show FilterIcon.
-            The content <SidebarFilterControls /> is only rendered when isSidebarOpen is true.
-            SidebarFilterControls itself handles not rendering if !isSidebarOpen.
-        */}
         <SidebarFilterControls isSidebarOpen={isSidebarOpen} />
       </SidebarSection>
 
-      {isSidebarOpen && <Separator className="my-2" />}
+      {isSidebarOpen && <Separator className="my-3" />}
 
       <SidebarSection
         title="View Controls"
         icon={Eye}
         isSidebarOpen={isSidebarOpen}
-        defaultOpen={true}
+        defaultOpen={false} // Default to closed for less clutter
         SidebarButtonComponent={SidebarButtonComponent}
       >
-        {" "}
-        {/* PASS PROP */}
         <SidebarButtonComponent
           icon={areAllNotesCollapsed ? Eye : EyeOff}
           label={areAllNotesCollapsed ? "Show Notes" : "Hide Notes"}
@@ -225,7 +304,7 @@ export function SidebarMainContent({
         />
         <SidebarButtonComponent
           icon={ChevronsUpDown}
-          label="Expand All"
+          label="Expand All Tasks"
           onClick={() => setMaxVisibleDepth(null)}
           isSidebarOpen={isSidebarOpen}
           tooltip="Expand All Tasks"
@@ -252,7 +331,38 @@ export function SidebarMainContent({
           tooltip="Collapse to Level 3"
         />
       </SidebarSection>
+
+      {isSidebarOpen && <Separator className="my-3" />}
+
+      <SidebarSection
+        title="Data Management"
+        icon={DatabaseZap}
+        isSidebarOpen={isSidebarOpen}
+        defaultOpen={false} // Default to closed
+        SidebarButtonComponent={SidebarButtonComponent}
+      >
+        <SidebarButtonComponent
+          icon={Save}
+          label="Save Progress"
+          onClick={handleSave}
+          isSidebarOpen={isSidebarOpen}
+          tooltip="Save Current State"
+        />
+        <SidebarButtonComponent
+          icon={FileDown}
+          label="Export Active Project"
+          onClick={handleExport}
+          isSidebarOpen={isSidebarOpen}
+          tooltip="Export Active Project as JSON"
+        />
+        <SidebarButtonComponent
+          icon={FileUp}
+          label="Import Project"
+          onClick={handleImport}
+          isSidebarOpen={isSidebarOpen}
+          tooltip="Import Project from JSON"
+        />
+      </SidebarSection>
     </div>
   );
 }
-// --- END OF FILE components/sidebar/sidebar-main-content.tsx ---

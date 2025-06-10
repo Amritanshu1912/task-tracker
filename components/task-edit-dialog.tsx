@@ -19,13 +19,14 @@ import { useTaskStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AVAILABLE_LABELS, LABEL_EMOJIS } from "@/lib/labels";
+import { toast } from "sonner"; // For feedback
 
 interface TaskEditDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   task?: Task | null;
-  parentId?: string;
-  mode: "edit" | "createSubtask" | "createRootTask";
+  parentId?: string; // For subtasks
+  mode: "edit" | "createSubtask" | "createRootTask"; // createRootTask now means root for active project
 }
 
 /**
@@ -44,13 +45,17 @@ export function TaskEditDialog({
   const [notes, setNotes] = useState("");
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
 
-  // Determine dialog title and placeholder based on mode
+  // --- MODIFY HERE: Get activeProjectId and addTask from store ---
+  const storeAddTask = useTaskStore((state) => state.addTask);
+  const storeUpdateTask = useTaskStore((state) => state.updateTask);
+  const activeProjectId = useTaskStore((state) => state.activeProjectId); // Needed for createRootTask
+
   const dialogTitleText =
     mode === "edit"
       ? "Edit Task"
       : mode === "createSubtask"
       ? "Create New Subtask"
-      : "Create New Task"; // For createRootTask
+      : "Create New Task"; // For createRootTask in active project
   const titleInputPlaceholder =
     mode === "edit"
       ? "Task title"
@@ -72,6 +77,7 @@ export function TaskEditDialog({
         setNotes(task.notes || "");
         setSelectedLabels([...task.labels]);
       } else {
+        // For createSubtask or createRootTask
         setTitle(mode === "createSubtask" ? "New Subtask" : "New Task");
         setNotes("");
         setSelectedLabels([]);
@@ -79,32 +85,28 @@ export function TaskEditDialog({
     }
   }, [isOpen, task, mode]);
 
-  // Toggle label selection
   const handleLabelToggle = useCallback((label: string) => {
     setSelectedLabels((prev) =>
       prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
     );
   }, []);
 
-  // Handle form submission for both edit and createSubtask modes
   const handleSubmit = useCallback(() => {
     if (!title.trim()) {
-      alert("Title cannot be empty.");
+      toast.error("Title cannot be empty.");
       return;
     }
-    const { updateTask, addTask } = useTaskStore.getState();
 
     if (mode === "edit" && task) {
       const updatedTaskData: Partial<Task> = {
-        // Use Partial<Task> for fieldsToUpdate
         title: title.trim(),
         notes: notes.trim(),
         labels: selectedLabels,
       };
-      updateTask(task.id, updatedTaskData);
+      storeUpdateTask(task.id, updatedTaskData); // updateTask is now project-scoped in store
     } else if (mode === "createSubtask") {
       if (!parentId) {
-        alert("Error: Parent task ID is missing for creating subtask.");
+        toast.error("Error: Parent ID missing for subtask.");
         return;
       }
       const newSubtask: Task = {
@@ -115,9 +117,16 @@ export function TaskEditDialog({
         labels: selectedLabels,
         subtasks: [],
       };
-      addTask(newSubtask, parentId); // Call addTask with parentId
+      storeAddTask(newSubtask, parentId); // addTask is now project-scoped in store
     } else if (mode === "createRootTask") {
-      // For creating a root task, parentId will be undefined (or explicitly null from store if desired)
+      if (!activeProjectId) {
+        // --- ADD THIS CHECK ---
+        toast.error("No active project.", {
+          description: "Cannot create task.",
+        });
+        onOpenChange(false); // Close dialog if no active project
+        return;
+      }
       const newRootTask: Task = {
         id: crypto.randomUUID(),
         title: title.trim(),
@@ -126,10 +135,22 @@ export function TaskEditDialog({
         labels: selectedLabels,
         subtasks: [],
       };
-      addTask(newRootTask, undefined); // Pass undefined or null for parentId to signify root
+      // parentId is undefined for root tasks within the active project
+      storeAddTask(newRootTask, undefined); // addTask handles adding to active project
     }
     onOpenChange(false);
-  }, [title, notes, selectedLabels, mode, task, parentId, onOpenChange]);
+  }, [
+    title,
+    notes,
+    selectedLabels,
+    mode,
+    task,
+    parentId,
+    onOpenChange,
+    storeUpdateTask,
+    storeAddTask,
+    activeProjectId, // --- ADD activeProjectId to dependencies ---
+  ]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
