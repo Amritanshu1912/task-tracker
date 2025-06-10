@@ -2,111 +2,144 @@
 
 "use client";
 
-import { useCallback } from "react";
+import { useMemo } from "react";
 import { useTaskStore } from "@/lib/store";
+import { shallow } from "zustand/shallow";
+import type { TaskStore as TaskStoreType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Zap, Save, FileDown, FileUp } from "lucide-react";
-import { exportToJson, importFromJson } from "@/lib/utils";
-import { toast } from "sonner";
+import {
+  Zap,
+  Plus, // Changed from PlusCircle for the button text variant
+  CheckCircle,
+  ListTodo,
+  Target, // Using Target for Progress % icon as in old sidebar stats
+  Settings, // Placeholder for potential future settings dropdown
+  Circle,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-// Renders the application header with branding and data management buttons.
+// Reusable StatItem component for the header
+const StatItem = ({
+  icon: Icon,
+  value,
+  label,
+  iconClassName,
+  title,
+}: {
+  icon: React.ElementType;
+  value: string | number;
+  label: string;
+  iconClassName?: string;
+  title?: string;
+}) => (
+  <div className="flex items-center text-center" title={title}>
+    <div className="flex items-center justify-center gap-1 text-sm font-medium text-foreground">
+      <Icon className={cn("h-4 w-4", iconClassName)} />
+      <span>{value}</span>
+      <div className="text-[13px] text-muted-foreground leading-tight">
+        {label}
+      </div>
+    </div>
+  </div>
+);
+
 export function AppHeader() {
-  const saveToLocalStorage = useTaskStore((state) => state.saveToLocalStorage);
+  const activeProjectId = useTaskStore(
+    (state: TaskStoreType) => state.activeProjectId
+  );
+  const projects = useTaskStore((state: TaskStoreType) => state.projects);
+  const stats = useTaskStore((state: TaskStoreType) => state.stats);
+  const openAddTaskDialog = useTaskStore(
+    (state: TaskStoreType) => state.openAddTaskDialog
+  );
 
-  const handleSave = useCallback(() => {
-    saveToLocalStorage();
-    toast.success("Progress Saved", {
-      description: "Your changes have been saved to local storage.",
-    });
-  }, [saveToLocalStorage]);
+  const activeProject = useMemo(() => {
+    return projects.find((p) => p.id === activeProjectId);
+  }, [projects, activeProjectId]);
 
-  const handleExport = useCallback(() => {
-    // Construct the object to be exported, matching saveToLocalStorage structure
-    const stateToExport = {
-      tasks: useTaskStore.getState().tasks,
-      activeLabelFilters: useTaskStore.getState().activeLabelFilters,
-      activeStatusFilter: useTaskStore.getState().activeStatusFilter,
-      isSidebarOpen: useTaskStore.getState().isSidebarOpen,
-      maxVisibleDepth: useTaskStore.getState().maxVisibleDepth,
-      areAllNotesCollapsed: useTaskStore.getState().areAllNotesCollapsed,
-      // Add any other state you want to include in the export, like visibilityActionTrigger if needed
-    };
-    exportToJson(stateToExport);
-    toast.info("Data Exported", {
-      description: "Your task data has been downloaded as a JSON file.",
-    });
-  }, []);
-
-  // Prompts user to select a JSON file and imports it into the store.
-  const handleImport = useCallback(() => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = async (e) => {
-      // Make async to await importFromJson if it returns a promise
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        try {
-          await importFromJson(file);
-        } catch (error) {
-          toast.error("Import Failed", {
-            description:
-              error instanceof Error
-                ? error.message
-                : "Could not import the file.",
-          });
-          console.error("Import initiation failed or was rejected:", error);
-        }
-      }
-    };
-    input.click();
-  }, []);
+  const handleAddTaskToProject = () => {
+    if (activeProject) {
+      openAddTaskDialog();
+    } else {
+      useTaskStore.getState().openAddTaskDialog();
+    }
+  };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl print:hidden">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
+    <header
+      className={cn(
+        "sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl print:hidden",
+        "h-16"
+      )}
+    >
+      <div className="container mx-auto px-4 h-full flex items-center justify-between gap-4">
+        {/* Left Section: Branding */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
               <Zap className="w-4 h-4 text-primary-foreground" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">Task Tracker</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                E-commerce Platform - Phase 2
-              </p>
-            </div>
+            <h1 className="text-lg font-bold tracking-tight hidden sm:block">
+              Task Tracker
+            </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSave}
-            title="Save Progress"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            Save Progress
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            title="Export JSON"
-          >
-            <FileDown className="w-4 h-4 mr-2" />
-            Export JSON
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleImport}
-            title="Import JSON"
-          >
-            <FileUp className="w-4 h-4 mr-2" />
-            Import JSON
-          </Button>
+        {/* Center Section: Active Project Name & Add Task Button */}
+        <div className="flex-1 flex items-center justify-center min-w-0 px-2 sm:px-4">
+          {activeProject ? (
+            <>
+              <span>Project- </span>
+              <h2
+                className="text-base sm:text-lg font-semibold truncate text-foreground max-w-[150px] sm:max-w-[250px] md:max-w-xs lg:max-w-sm xl:max-w-md"
+                title={activeProject.name}
+              >
+                {activeProject.name}
+              </h2>
+            </>
+          ) : (
+            <p className="text-base sm:text-lg italic text-muted-foreground">
+              No Project Selected
+            </p>
+          )}
+        </div>
+
+        {/* Right Section: Task Statistics (styled like old SidebarStats) */}
+        <div className="flex align-center justify-center gap-3 sm:gap-4 flex-shrink-0">
+          {activeProject && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2.5 sm:px-3 border border-gray-700" // Slightly smaller padding on small screens
+              onClick={handleAddTaskToProject}
+              title="Add new task to this project"
+            >
+              <Plus className="h-4 w-4 sm:mr-1.5" />
+              {/* Icon only on very small, then icon + text */}
+              <span className="hidden sm:inline">Add Task</span>
+            </Button>
+          )}
+          <StatItem
+            icon={CheckCircle}
+            value={stats.completed}
+            label="Done"
+            iconClassName="text-green-500"
+            title={`${stats.completed} tasks completed`}
+          />
+          <StatItem
+            icon={Circle}
+            value={stats.total}
+            label="Total"
+            // iconClassName="text-blue-500"
+            title={`${stats.total} total tasks`}
+          />
+          <StatItem
+            icon={Target}
+            value={`${stats.percentage}%`}
+            label="Progress"
+            iconClassName="text-primary"
+            title={`${stats.percentage}% project progress`}
+          />
         </div>
       </div>
     </header>
