@@ -30,16 +30,14 @@ const getNextDefaultProjectName = (existingProjects: Project[]): string => {
 };
 
 // Helper function to recursively remove a label from a task and its subtasks
-const removeLabelFromTasksRecursive = (tasks: Task[], labelIdToRemove: string): Task[] => {
+const removeLabelFromTasksRecursive = (tasks: Task[], labelNameToRemove: string): Task[] => {
   return tasks.map(task => {
-    const newLabels = task.labels.filter(labelNameOrId => labelNameOrId !== labelIdToRemove);
-    // If task.labels stores full LabelObjects or just IDs/names matters here.
-    // Assuming for now task.labels stores string names/IDs that match LabelObject.id or LabelObject.name
-    // If it stores LabelObjects, the filter condition would be `labelObj.id !== labelIdToRemove`
+    // Filter by label NAME since tasks currently store label names
+    const newLabels = task.labels.filter(labelName => labelName !== labelNameToRemove);
     return {
       ...task,
       labels: newLabels,
-      subtasks: task.subtasks ? removeLabelFromTasksRecursive(task.subtasks, labelIdToRemove) : [],
+      subtasks: task.subtasks ? removeLabelFromTasksRecursive(task.subtasks, labelNameToRemove) : [],
     };
   });
 };
@@ -268,17 +266,19 @@ export const useTaskStore = create<TaskStore>()(
       const labelToRemove = get().customLabels.find(l => l.id === labelIdToDelete);
       if (!labelToRemove) return;
 
+      const labelNameToRemoveOnTasks = labelToRemove.name;
+
       set((state) => ({
         customLabels: state.customLabels.filter((label) => label.id !== labelIdToDelete),
         // Remove this label from all tasks in all projects
         projects: state.projects.map(project => ({
           ...project,
-          tasks: removeLabelFromTasksRecursive(project.tasks, labelIdToDelete), // Or labelToRemove.name if tasks store names
+          tasks: removeLabelFromTasksRecursive(project.tasks, labelNameToRemoveOnTasks), // Or labelToRemove.name if tasks store names
         })),
         // Also update activeLabelFilters if it contained the deleted label
-        activeLabelFilters: state.activeLabelFilters.filter(activeFilter => activeFilter !== labelIdToDelete), // Or labelToRemove.name
+        activeLabelFilters: state.activeLabelFilters.filter(activeFilter => activeFilter !== labelNameToRemoveOnTasks), // Or labelToRemove.name
       }));
-      toast.info("Label deleted", { description: `Label "${labelToRemove.name}" and its associations removed.` });
+      toast.info("Label deleted", { description: `Label "${labelNameToRemoveOnTasks}" and its associations removed.` });
     },
 
     // --- UI Actions ---
