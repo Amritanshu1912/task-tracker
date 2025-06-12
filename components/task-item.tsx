@@ -1,8 +1,12 @@
 // components/task-item.tsx
 "use client";
 
-import { useState, useEffect, useCallback, memo, useMemo } from "react";
-import type { Task, StatusFilterState } from "@/lib/types";
+import React, { useState, useEffect, useCallback, memo, useMemo } from "react"; // Added React
+import type {
+  Task,
+  LabelObject,
+  TaskStore as TaskStoreType,
+} from "@/lib/types"; // Added LabelObject, TaskStoreType
 import { taskMatchesFilters } from "../lib/filters";
 import { useTaskStore } from "@/lib/store";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TaskEditDialog } from "./task-edit-dialog";
 import { cn } from "@/lib/utils";
-import { LABEL_EMOJIS } from "@/lib/labels";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"; // For delete confirmation
 
 interface TaskItemProps {
   task: Task;
@@ -35,9 +39,8 @@ interface TaskItemProps {
 
 export const TaskItem = memo(function TaskItem({
   task,
-  parentId,
+  parentId: parentIdForSubtaskDialog,
   taskNumber,
-  parentId: directVisualParentId,
   level = 0,
 }: TaskItemProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -47,22 +50,35 @@ export const TaskItem = memo(function TaskItem({
     "edit"
   );
 
-  const storeUpdateTask = useTaskStore((state) => state.updateTask);
-  const storeDeleteTask = useTaskStore((state) => state.deleteTask);
-  const storeAddTask = useTaskStore((state) => state.addTask);
+  // For delete confirmation
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
+  // Select store actions and relevant state individually
+  const storeUpdateTask = useTaskStore(
+    (state: TaskStoreType) => state.updateTask
+  );
+  const storeDeleteTask = useTaskStore(
+    (state: TaskStoreType) => state.deleteTask
+  );
+  // storeAddTask is not used directly by TaskItem, but by its TaskEditDialog for subtasks
   const areAllNotesCollapsed = useTaskStore(
-    (state) => state.areAllNotesCollapsed
+    (state: TaskStoreType) => state.areAllNotesCollapsed
   );
   const maxVisibleDepthFromStore = useTaskStore(
-    (state) => state.maxVisibleDepth
+    (state: TaskStoreType) => state.maxVisibleDepth
   );
   const visibilityActionTrigger = useTaskStore(
-    (state) => state.visibilityActionTrigger
+    (state: TaskStoreType) => state.visibilityActionTrigger
   );
-
-  const activeLabelFilters = useTaskStore((state) => state.activeLabelFilters);
-  const activeStatusFilter = useTaskStore((state) => state.activeStatusFilter);
+  const activeLabelFilters = useTaskStore(
+    (state: TaskStoreType) => state.activeLabelFilters
+  ); // Now label IDs
+  const activeStatusFilter = useTaskStore(
+    (state: TaskStoreType) => state.activeStatusFilter
+  );
+  const customLabels = useTaskStore(
+    (state: TaskStoreType) => state.customLabels
+  ); // For displaying label details
 
   const hasSubtasks = task.subtasks && task.subtasks.length > 0;
   const hasNotes = task.notes && task.notes.trim() !== "";
@@ -143,15 +159,14 @@ export const TaskItem = memo(function TaskItem({
     [storeUpdateTask, task.id]
   );
 
-  const handleDelete = useCallback(() => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete this task and all its subtasks?"
-      )
-    ) {
-      storeDeleteTask(task.id);
-    }
-  }, [parentId, task.id]);
+  const handleDeleteInitiate = useCallback(() => {
+    setIsDeleteConfirmOpen(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    storeDeleteTask(task.id);
+    // Toast can be added in the store action or here if preferred
+  }, [storeDeleteTask, task.id]);
 
   const handleEditTask = useCallback(() => {
     setDialogMode("edit");
@@ -162,6 +177,14 @@ export const TaskItem = memo(function TaskItem({
     setDialogMode("createSubtask");
     setIsEditDialogOpen(true);
   }, []);
+
+  // Memoize resolved labels to prevent re-computation on every render
+  const resolvedLabels = useMemo(() => {
+    if (!task.labels || task.labels.length === 0) return [];
+    return task.labels
+      .map((labelId) => customLabels.find((cl) => cl.id === labelId))
+      .filter(Boolean) as LabelObject[]; // Filter out undefined if a labelId is somehow invalid
+  }, [task.labels, customLabels]);
 
   const showSubtasks = hasSubtasks && !isEffectivelyCollapsed;
 
@@ -180,10 +203,10 @@ export const TaskItem = memo(function TaskItem({
       <div className={taskItemClasses}>
         <div className="p-3 flex items-start gap-3">
           <div
-            className="w-6 h-6 flex items-center justify-center cursor-pointer mt-1"
+            className="w-6 h-6 flex items-center justify-center cursor-pointer mt-1 shrink-0"
             onClick={handleToggleChevronCollapse}
             role="button"
-            aria-expanded={!isEffectivelyCollapsed && hasSubtasks}
+            aria-expanded={showSubtasks}
             aria-label={
               isEffectivelyCollapsed ? "Expand subtasks" : "Collapse subtasks"
             }
@@ -206,15 +229,16 @@ export const TaskItem = memo(function TaskItem({
           <Checkbox
             checked={task.completed}
             onCheckedChange={handleToggleComplete}
-            className="mt-2 text-sm"
+            className="mt-1.5 shrink-0" // Adjusted margin for better alignment
             aria-labelledby={`task-title-${task.id}`}
           />
 
-          <div className="min-w-[60px] text-xs bg-muted px-2 py-1 rounded text-center mt-1">
+          <div className="min-w-[60px] sm:min-w-[50px] text-xs bg-muted px-2 py-1 rounded text-center mt-1">
             {taskNumber}
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
+            {/* min-w-0 for proper truncation */}
             <div
               id={`task-title-${task.id}`}
               contentEditable={isEditingTitle}
@@ -224,7 +248,8 @@ export const TaskItem = memo(function TaskItem({
               className={cn(
                 "outline-none rounded px-2 py-1 text-sm",
                 isEditingTitle && "bg-muted ring-1 ring-ring",
-                task.completed && "line-through opacity-95"
+                task.completed &&
+                  "line-through text-muted-foreground opacity-80"
               )}
             >
               {task.title}
@@ -239,29 +264,41 @@ export const TaskItem = memo(function TaskItem({
                 className={cn(
                   "text-sm text-muted-foreground outline-none rounded px-2 py-1 whitespace-pre-wrap",
                   isEditingNotes ? "bg-muted ring-1 ring-ring" : "italic",
-                  task.completed && "line-through opacity-80"
+                  task.completed && "line-through opacity-70"
                 )}
               >
                 {task.notes}
               </div>
             )}
-
-            {task.labels.length > 0 && (
+            {/* --- MODIFIED Label Display --- */}
+            {resolvedLabels.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
-                {task.labels.map((label, i) => (
+                {resolvedLabels.map((labelObj) => (
                   <Badge
-                    key={`${label}-${i}`}
+                    key={labelObj.id}
                     variant="outline"
-                    className="text-xs px-1.5 py-0.5"
+                    className="text-xs px-1.5 py-0.5 font-normal" // font-normal for less emphasis
+                    style={
+                      labelObj.color
+                        ? {
+                            backgroundColor: `${labelObj.color}20`, // Use color with alpha for background
+                            borderColor: `${labelObj.color}80`, // Use color with alpha for border
+                            color: labelObj.color, // Use full color for text for better contrast potentially
+                          }
+                        : {}
+                    }
                   >
-                    {LABEL_EMOJIS[label] || "🏷️"} {label}
+                    {labelObj.emoji && (
+                      <span className="mr-1">{labelObj.emoji}</span>
+                    )}
+                    {labelObj.name}
                   </Badge>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="task-actions">
+          <div className="task-actions shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -276,10 +313,10 @@ export const TaskItem = memo(function TaskItem({
                   <Plus className="mr-2 h-4 w-4" /> Add Subtask
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={handleDelete}
-                  className="text-destructive"
+                  onClick={handleDeleteInitiate} // Use new handler
+                  className="text-destructive focus:text-destructive"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Task
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -288,11 +325,12 @@ export const TaskItem = memo(function TaskItem({
 
         {showSubtasks && task.subtasks && task.subtasks.length > 0 && (
           <div
-            className={`pl-10 pr-4 pb-3 ml-6 ${
+            className={cn(
+              "pl-10 pr-3 pb-3 ml-5", // Adjusted padding/margin
               level < 1
-                ? "border-l-2 border-border" // Styles indentation for top-level subtasks
-                : "border-l-2 border-border/50 hover:border-border/70" // Styles indentation for nested subtasks
-            }`}
+                ? "border-l-2 border-border"
+                : "border-l-2 border-border/50 hover:border-border/70"
+            )}
           >
             {task.subtasks.map(
               (subtask, index) =>
@@ -301,11 +339,11 @@ export const TaskItem = memo(function TaskItem({
                   activeLabelFilters,
                   activeStatusFilter
                 ) && (
-                  <div key={subtask.id} className="mt-2">
+                  <div key={subtask.id} className="mt-2 first:mt-0">
                     <TaskItem
                       task={subtask}
                       taskNumber={`${taskNumber}.${index + 1}`}
-                      parentId={task.id}
+                      parentId={task.id} // Correct parentId for subtask's context
                       level={level + 1}
                     />
                   </div>
@@ -320,12 +358,20 @@ export const TaskItem = memo(function TaskItem({
           isOpen={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           task={dialogMode === "edit" ? task : null}
-          parentId={
-            dialogMode === "createSubtask" ? task.id : directVisualParentId
-          }
+          // parentId is for the *new* subtask being created. It's the current task.id.
+          parentId={dialogMode === "createSubtask" ? task.id : undefined}
           mode={dialogMode}
         />
       )}
+
+      <ConfirmationDialog
+        isOpen={isDeleteConfirmOpen}
+        onOpenChange={setIsDeleteConfirmOpen}
+        title={`Delete Task: "${task.title}"?`}
+        description="This will permanently delete this task and all its subtasks. This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        confirmText="Delete Task"
+      />
     </>
   );
 });

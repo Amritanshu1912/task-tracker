@@ -8,7 +8,7 @@ task-tracker
 │   ├── app-header.tsx
 │   ├── app-sidebar.tsx
 │   ├── empty-state-card.tsx
-│   ├── label-picker.tsx
+│   ├── manage-labels-dialog.tsx
 │   ├── progress-bar.tsx
 │   ├── sidebar
 │   │   ├── sidebar-filter-controls.tsx
@@ -34,6 +34,7 @@ task-tracker
 │       ├── chart.tsx
 │       ├── checkbox.tsx
 │       ├── command.tsx
+│       ├── confirmation-dialog.tsx
 │       ├── context-menu.tsx
 │       ├── dialog.tsx
 │       ├── dropdown-menu.tsx
@@ -90,4 +91,5 @@ task-tracker
 ├── tailwind.config.ts
 ├── tsconfig.json
 └── zdocs
-    └─ PRD.md
+    ├── PRD.md
+    └── struct

@@ -18,6 +18,8 @@ import {
   DatabaseZap,
   ChevronDown,
   ChevronRight,
+  Tags, // New icon for Labels or Settings
+  Settings2, // Alternative for Settings
 } from "lucide-react";
 import { useTaskStore } from "@/lib/store";
 import type { TaskStore as TaskStoreType } from "@/lib/types";
@@ -27,6 +29,7 @@ import { SidebarSectionProject } from "./sidebar-section-project";
 import { exportToJson, importFromJson } from "@/lib/utils";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
+import { ManageLabelsDialog } from "../manage-labels-dialog";
 
 interface SidebarMainContentProps {
   isSidebarOpen: boolean;
@@ -216,6 +219,9 @@ export function SidebarMainContent({
   const activeProjectId = useTaskStore(
     (state: TaskStoreType) => state.activeProjectId
   );
+  const openManageLabelsDialog = useTaskStore(
+    (state: TaskStoreType) => state.openManageLabelsDialog
+  );
 
   // Callback to handle saving progress to local storage.
   const handleSave = useCallback(() => {
@@ -263,106 +269,129 @@ export function SidebarMainContent({
   }, []);
 
   return (
-    <div
-      className={cn(
-        "flex-1 overflow-y-auto overflow-x-hidden transition-all duration-200 ease-in-out",
-        isSidebarOpen ? "px-3 pt-2 pb-4 space-y-2" : "px-2 py-2 space-y-2"
-      )}
-    >
-      <SidebarSectionProject
-        isSidebarOpen={isSidebarOpen}
-        SidebarButtonComponent={SidebarButtonComponent}
-      />
-
-      {isSidebarOpen && <Separator className="my-3" />}
-
-      <SidebarSection
-        title="Filters"
-        icon={FilterIcon}
-        isSidebarOpen={isSidebarOpen}
-        defaultOpen={true}
-        SidebarButtonComponent={SidebarButtonComponent}
+    <>
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto overflow-x-hidden transition-all duration-200 ease-in-out",
+          isSidebarOpen ? "px-3 pt-2 pb-4 space-y-2" : "px-2 py-2 space-y-2"
+        )}
       >
-        <SidebarFilterControls isSidebarOpen={isSidebarOpen} />
-      </SidebarSection>
+        <SidebarSectionProject
+          isSidebarOpen={isSidebarOpen}
+          SidebarButtonComponent={SidebarButtonComponent}
+        />
 
-      {isSidebarOpen && <Separator className="my-3" />}
+        {isSidebarOpen && <Separator className="my-3" />}
 
-      <SidebarSection
-        title="View Controls"
-        icon={Eye}
-        isSidebarOpen={isSidebarOpen}
-        defaultOpen={false} // Default to closed for less clutter
-        SidebarButtonComponent={SidebarButtonComponent}
-      >
-        <SidebarButtonComponent
-          icon={areAllNotesCollapsed ? Eye : EyeOff}
-          label={areAllNotesCollapsed ? "Show Notes" : "Hide Notes"}
-          onClick={toggleAllNotes}
+        <SidebarSection
+          title="Filters"
+          icon={FilterIcon}
           isSidebarOpen={isSidebarOpen}
-          tooltip={areAllNotesCollapsed ? "Show All Notes" : "Hide All Notes"}
-        />
-        <SidebarButtonComponent
-          icon={ChevronsUpDown}
-          label="Expand All Tasks"
-          onClick={() => setMaxVisibleDepth(null)}
-          isSidebarOpen={isSidebarOpen}
-          tooltip="Expand All Tasks"
-        />
-        <SidebarButtonComponent
-          icon={LayoutList}
-          label="Collapse Lvl 1+"
-          onClick={() => setMaxVisibleDepth(0)}
-          isSidebarOpen={isSidebarOpen}
-          tooltip="Collapse to Level 1"
-        />
-        <SidebarButtonComponent
-          icon={Layers2}
-          label="Collapse Lvl 2+"
-          onClick={() => setMaxVisibleDepth(1)}
-          isSidebarOpen={isSidebarOpen}
-          tooltip="Collapse to Level 2"
-        />
-        <SidebarButtonComponent
-          icon={Layers3}
-          label="Collapse Lvl 3+"
-          onClick={() => setMaxVisibleDepth(2)}
-          isSidebarOpen={isSidebarOpen}
-          tooltip="Collapse to Level 3"
-        />
-      </SidebarSection>
+          defaultOpen={true}
+          SidebarButtonComponent={SidebarButtonComponent}
+        >
+          <SidebarFilterControls isSidebarOpen={isSidebarOpen} />
+        </SidebarSection>
 
-      {isSidebarOpen && <Separator className="my-3" />}
+        {isSidebarOpen && <Separator className="my-3" />}
 
-      <SidebarSection
-        title="Data Management"
-        icon={DatabaseZap}
-        isSidebarOpen={isSidebarOpen}
-        defaultOpen={false} // Default to closed
-        SidebarButtonComponent={SidebarButtonComponent}
-      >
-        <SidebarButtonComponent
-          icon={Save}
-          label="Save Progress"
-          onClick={handleSave}
+        <SidebarSection
+          title="Workspace"
+          icon={Settings2} // Or Tags, or a cog icon
           isSidebarOpen={isSidebarOpen}
-          tooltip="Save Current State"
-        />
-        <SidebarButtonComponent
-          icon={FileDown}
-          label="Export Active Project"
-          onClick={handleExport}
+          defaultOpen={false}
+          SidebarButtonComponent={SidebarButtonComponent}
+        >
+          <SidebarButtonComponent
+            icon={Tags} // Icon for managing labels
+            label="Manage Labels"
+            onClick={openManageLabelsDialog}
+            isSidebarOpen={isSidebarOpen}
+            tooltip="Manage Custom Labels"
+          />
+          {/* Future settings can go here */}
+        </SidebarSection>
+
+        {isSidebarOpen && <Separator className="my-3" />}
+
+        <SidebarSection
+          title="View Controls"
+          icon={Eye}
           isSidebarOpen={isSidebarOpen}
-          tooltip="Export Active Project as JSON"
-        />
-        <SidebarButtonComponent
-          icon={FileUp}
-          label="Import Project"
-          onClick={handleImport}
+          defaultOpen={false} // Default to closed for less clutter
+          SidebarButtonComponent={SidebarButtonComponent}
+        >
+          <SidebarButtonComponent
+            icon={areAllNotesCollapsed ? Eye : EyeOff}
+            label={areAllNotesCollapsed ? "Show Notes" : "Hide Notes"}
+            onClick={toggleAllNotes}
+            isSidebarOpen={isSidebarOpen}
+            tooltip={areAllNotesCollapsed ? "Show All Notes" : "Hide All Notes"}
+          />
+          <SidebarButtonComponent
+            icon={ChevronsUpDown}
+            label="Expand All Tasks"
+            onClick={() => setMaxVisibleDepth(null)}
+            isSidebarOpen={isSidebarOpen}
+            tooltip="Expand All Tasks"
+          />
+          <SidebarButtonComponent
+            icon={LayoutList}
+            label="Collapse Lvl 1+"
+            onClick={() => setMaxVisibleDepth(0)}
+            isSidebarOpen={isSidebarOpen}
+            tooltip="Collapse to Level 1"
+          />
+          <SidebarButtonComponent
+            icon={Layers2}
+            label="Collapse Lvl 2+"
+            onClick={() => setMaxVisibleDepth(1)}
+            isSidebarOpen={isSidebarOpen}
+            tooltip="Collapse to Level 2"
+          />
+          <SidebarButtonComponent
+            icon={Layers3}
+            label="Collapse Lvl 3+"
+            onClick={() => setMaxVisibleDepth(2)}
+            isSidebarOpen={isSidebarOpen}
+            tooltip="Collapse to Level 3"
+          />
+        </SidebarSection>
+
+        {isSidebarOpen && <Separator className="my-3" />}
+
+        <SidebarSection
+          title="Data Management"
+          icon={DatabaseZap}
           isSidebarOpen={isSidebarOpen}
-          tooltip="Import Project from JSON"
-        />
-      </SidebarSection>
-    </div>
+          defaultOpen={false} // Default to closed
+          SidebarButtonComponent={SidebarButtonComponent}
+        >
+          <SidebarButtonComponent
+            icon={Save}
+            label="Save Progress"
+            onClick={handleSave}
+            isSidebarOpen={isSidebarOpen}
+            tooltip="Save Current State"
+          />
+          <SidebarButtonComponent
+            icon={FileDown}
+            label="Export Active Project"
+            onClick={handleExport}
+            isSidebarOpen={isSidebarOpen}
+            tooltip="Export Active Project as JSON"
+          />
+          <SidebarButtonComponent
+            icon={FileUp}
+            label="Import Project"
+            onClick={handleImport}
+            isSidebarOpen={isSidebarOpen}
+            tooltip="Import Project from JSON"
+          />
+        </SidebarSection>
+      </div>
+      {/* --- ADD ManageLabelsDialog rendering --- */}
+      <ManageLabelsDialog />
+    </>
   );
 }

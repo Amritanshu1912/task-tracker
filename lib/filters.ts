@@ -1,16 +1,19 @@
 // lib/filters.ts
-import type { Task, StatusFilterState } from "./types"; // Adjust path if needed
+
+import type { Task, StatusFilterState, LabelObject } from "./types";
 
 export const taskMatchesFilters = (
   task: Task,
-  activeLabels: string[],
+  activeLabelFilterIds: string[], // Renamed for clarity: these are now IDs
   activeStatus: StatusFilterState | null
 ): boolean => {
   let result = false;
 
   const taskMatchesLabels =
-    activeLabels.length === 0 ||
-    task.labels.some((label) => activeLabels.includes(label));
+    activeLabelFilterIds.length === 0 ||
+    task.labels.some((taskLabelId) =>
+      activeLabelFilterIds.includes(taskLabelId)
+    );
 
   if (activeStatus === 'active') {
     if (task.completed) {
@@ -19,7 +22,7 @@ export const taskMatchesFilters = (
       if (taskMatchesLabels) {
         result = true;
       } else if (task.subtasks && task.subtasks.length > 0) {
-        result = task.subtasks.some(st => taskMatchesFilters(st, activeLabels, 'active'));
+        result = task.subtasks.some(st => taskMatchesFilters(st, activeLabelFilterIds, 'active'));
       } else {
         result = false;
       }
@@ -31,7 +34,7 @@ export const taskMatchesFilters = (
       result = true;
     } else {
       if (task.subtasks && task.subtasks.length > 0) {
-        result = task.subtasks.some(st => taskMatchesFilters(st, activeLabels, 'completed'));
+        result = task.subtasks.some(st => taskMatchesFilters(st, activeLabelFilterIds, 'completed'));
       } else {
         result = false;
       }
@@ -40,7 +43,7 @@ export const taskMatchesFilters = (
     if (taskMatchesLabels) {
       result = true;
     } else if (task.subtasks && task.subtasks.length > 0) {
-      result = task.subtasks.some(st => taskMatchesFilters(st, activeLabels, null));
+      result = task.subtasks.some(st => taskMatchesFilters(st, activeLabelFilterIds, null));
     } else {
       result = false;
     }

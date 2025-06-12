@@ -1,5 +1,5 @@
 // lib/task-utils.ts
-import type { Task, RawTaskData, TaskStore } from "@/lib/types"; // Assuming TaskStore['stats'] is the return type for updateStats
+import type { Task, RawTaskData, TaskStore, Project } from "@/lib/types"; // Assuming TaskStore['stats'] is the return type for updateStats
 
 // --- Helper Functions for Task Data Structure ---
 export function convertRawToFullTask(rawData: RawTaskData): Task {
@@ -198,3 +198,28 @@ export function calculateStats(rootTasks: Task[]): TaskStore['stats'] { // Renam
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { completed, total, percentage };
 }
+
+export function getNextDefaultProjectName(existingProjects: Project[]): string {
+    const baseName = "Untitled Project";
+    let counter = 1;
+    let nextName = `${baseName} ${counter}`;
+    // eslint-disable-next-line no-loop-func
+    while (existingProjects.some(p => p.name === nextName)) {
+        counter++;
+        nextName = `${baseName} ${counter}`;
+    }
+    return nextName;
+};
+
+// Helper function to recursively remove a label from a task and its subtasks
+export function removeLabelFromTasksRecursive(tasks: Task[], labelIdToRemove: string): Task[] {
+    return tasks.map(task => {
+        // Task.labels now stores label IDs
+        const newLabels = task.labels.filter(labelId => labelId !== labelIdToRemove);
+        return {
+            ...task,
+            labels: newLabels, // newLabels are IDs
+            subtasks: task.subtasks ? removeLabelFromTasksRecursive(task.subtasks, labelIdToRemove) : [],
+        };
+    });
+};

@@ -12,14 +12,18 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Label as UiLabel } from "@/components/ui/label"; // Aliased to avoid conflict
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useTaskStore } from "@/lib/store";
-import type { Task } from "@/lib/types";
+import type {
+  Task,
+  LabelObject,
+  TaskStore as TaskStoreType,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { AVAILABLE_LABELS, LABEL_EMOJIS } from "@/lib/labels";
 import { toast } from "sonner"; // For feedback
+import { ScrollArea } from "./ui/scroll-area";
 
 interface TaskEditDialogProps {
   isOpen: boolean;
@@ -43,12 +47,18 @@ export function TaskEditDialog({
   // Local state for form fields
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
-  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
 
-  // --- MODIFY HERE: Get activeProjectId and addTask from store ---
-  const storeAddTask = useTaskStore((state) => state.addTask);
-  const storeUpdateTask = useTaskStore((state) => state.updateTask);
-  const activeProjectId = useTaskStore((state) => state.activeProjectId); // Needed for createRootTask
+  const storeAddTask = useTaskStore((state: TaskStoreType) => state.addTask);
+  const storeUpdateTask = useTaskStore(
+    (state: TaskStoreType) => state.updateTask
+  );
+  const activeProjectId = useTaskStore(
+    (state: TaskStoreType) => state.activeProjectId
+  );
+  const customLabels = useTaskStore(
+    (state: TaskStoreType) => state.customLabels
+  );
 
   const dialogTitleText =
     mode === "edit"
@@ -75,19 +85,21 @@ export function TaskEditDialog({
       if (mode === "edit" && task) {
         setTitle(task.title);
         setNotes(task.notes || "");
-        setSelectedLabels([...task.labels]);
+        setSelectedLabelIds([...task.labels]);
       } else {
         // For createSubtask or createRootTask
         setTitle(mode === "createSubtask" ? "New Subtask" : "New Task");
         setNotes("");
-        setSelectedLabels([]);
+        setSelectedLabelIds([]);
       }
     }
   }, [isOpen, task, mode]);
 
-  const handleLabelToggle = useCallback((label: string) => {
-    setSelectedLabels((prev) =>
-      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
+  const handleLabelToggle = useCallback((labelId: string) => {
+    setSelectedLabelIds((prevIds) =>
+      prevIds.includes(labelId)
+        ? prevIds.filter((id) => id !== labelId)
+        : [...prevIds, labelId]
     );
   }, []);
 
@@ -101,7 +113,7 @@ export function TaskEditDialog({
       const updatedTaskData: Partial<Task> = {
         title: title.trim(),
         notes: notes.trim(),
-        labels: selectedLabels,
+        labels: selectedLabelIds,
       };
       storeUpdateTask(task.id, updatedTaskData); // updateTask is now project-scoped in store
     } else if (mode === "createSubtask") {
@@ -114,7 +126,7 @@ export function TaskEditDialog({
         title: title.trim(),
         notes: notes.trim(),
         completed: false,
-        labels: selectedLabels,
+        labels: selectedLabelIds,
         subtasks: [],
       };
       storeAddTask(newSubtask, parentId); // addTask is now project-scoped in store
@@ -132,7 +144,7 @@ export function TaskEditDialog({
         title: title.trim(),
         notes: notes.trim(),
         completed: false,
-        labels: selectedLabels,
+        labels: selectedLabelIds,
         subtasks: [],
       };
       // parentId is undefined for root tasks within the active project
@@ -142,7 +154,7 @@ export function TaskEditDialog({
   }, [
     title,
     notes,
-    selectedLabels,
+    selectedLabelIds,
     mode,
     task,
     parentId,
@@ -168,9 +180,9 @@ export function TaskEditDialog({
           }}
         >
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="dialog-title" className="text-right">
+            <UiLabel htmlFor="dialog-title" className="text-right">
               Title
-            </Label>
+            </UiLabel>
             <Input
               id="dialog-title"
               value={title}
@@ -184,9 +196,9 @@ export function TaskEditDialog({
             />
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
-            <Label htmlFor="dialog-notes" className="text-right pt-2">
+            <UiLabel htmlFor="dialog-notes" className="text-right pt-2">
               Notes
-            </Label>
+            </UiLabel>
             <Textarea
               id="dialog-notes"
               value={notes}
@@ -198,32 +210,55 @@ export function TaskEditDialog({
             />
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">Labels</Label>
-            <div className="col-span-3 flex flex-wrap gap-2">
-              {AVAILABLE_LABELS.map((label) => {
-                const isSelected = selectedLabels.includes(label);
-                return (
-                  <Badge
-                    key={label}
-                    className={cn(
-                      "cursor-pointer transition-colors duration-150 px-2.5 py-0.5 text-xs font-semibold rounded-full border",
-                      isSelected
-                        ? "bg-primary text-primary-foreground border-primary/70 hover:bg-primary/90"
-                        : "bg-transparent border-border text-foreground hover:bg-accent hover:text-accent-foreground"
-                    )}
-                    tabIndex={0}
-                    aria-pressed={isSelected}
-                    aria-label={`Toggle label ${label}`}
-                    onClick={() => handleLabelToggle(label)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ")
-                        handleLabelToggle(label);
-                    }}
-                  >
-                    {LABEL_EMOJIS[label] || "🏷️"} {label}
-                  </Badge>
-                );
-              })}
+            <UiLabel className="text-right pt-2">Labels</UiLabel>
+            <div className="col-span-3">
+              {customLabels.length > 0 ? (
+                <ScrollArea className="max-h-32">
+                  {/* Add ScrollArea if many labels */}
+                  <div className="flex flex-wrap gap-2 p-1">
+                    {customLabels.map((label: LabelObject) => {
+                      const isSelected = selectedLabelIds.includes(label.id);
+                      return (
+                        <Badge
+                          key={label.id}
+                          variant={isSelected ? "default" : "outline"} // Use "default" for selected
+                          className={cn(
+                            "cursor-pointer transition-all duration-150 px-2.5 py-1 text-xs font-semibold rounded-full border",
+                            isSelected && label.color && "text-white", // Ensure contrast if color is dark
+                            !isSelected &&
+                              "hover:bg-accent hover:text-accent-foreground"
+                          )}
+                          style={
+                            isSelected && label.color
+                              ? {
+                                  backgroundColor: `${label.color}30`, // Very light background
+                                  borderColor: label.color,
+                                }
+                              : {}
+                          }
+                          tabIndex={0}
+                          aria-pressed={isSelected}
+                          aria-label={`Toggle label ${label.name}`}
+                          onClick={() => handleLabelToggle(label.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ")
+                              handleLabelToggle(label.id);
+                          }}
+                        >
+                          {label.emoji && (
+                            <span className="mr-1">{label.emoji}</span>
+                          )}
+                          {label.name}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <p className="text-xs text-muted-foreground pt-2">
+                  No custom labels defined. Add some in "Manage Labels".
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter className="gap-2 mt-2">
