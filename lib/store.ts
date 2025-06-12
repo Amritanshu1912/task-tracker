@@ -11,36 +11,12 @@ import {
   addSubtaskToParentTree,
   deleteTaskFromTree,
   addLabelToTaskInTree,
-  calculateStats,
+  calculateStats, getNextDefaultProjectName, removeLabelFromTasksRecursive
 } from "./task-utils";
+import { DEFAULT_LABEL_DEFINITIONS } from "./labels";
 
 export const LOCAL_STORAGE_KEY = "taskTrackerProjects_v2"; // Updated key for new structure
 let autoSavePaused = false;
-
-const getNextDefaultProjectName = (existingProjects: Project[]): string => {
-  const baseName = "Untitled Project";
-  let counter = 1;
-  let nextName = `${baseName} ${counter}`;
-  // eslint-disable-next-line no-loop-func
-  while (existingProjects.some(p => p.name === nextName)) {
-    counter++;
-    nextName = `${baseName} ${counter}`;
-  }
-  return nextName;
-};
-
-// Helper function to recursively remove a label from a task and its subtasks
-const removeLabelFromTasksRecursive = (tasks: Task[], labelNameToRemove: string): Task[] => {
-  return tasks.map(task => {
-    // Filter by label NAME since tasks currently store label names
-    const newLabels = task.labels.filter(labelName => labelName !== labelNameToRemove);
-    return {
-      ...task,
-      labels: newLabels,
-      subtasks: task.subtasks ? removeLabelFromTasksRecursive(task.subtasks, labelNameToRemove) : [],
-    };
-  });
-};
 
 export const useTaskStore = create<TaskStore>()(
   subscribeWithSelector((set, get) => ({
@@ -229,9 +205,10 @@ export const useTaskStore = create<TaskStore>()(
     closeManageLabelsDialog: () => set({ isManageLabelsDialogOpen: false }),
     addCustomLabel: (labelData) => {
       const { name } = labelData;
-      if (get().customLabels.some(label => label.name.toLowerCase() === name.toLowerCase())) {
+      const existing = get().customLabels.find(label => label.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
         toast.error("Label already exists", { description: `A label named "${name}" already exists (case-insensitive).` });
-        return;
+        return existing;
       }
       const newLabel: LabelObject = {
         id: crypto.randomUUID(),
@@ -241,6 +218,7 @@ export const useTaskStore = create<TaskStore>()(
         customLabels: [...state.customLabels, newLabel],
       }));
       toast.success("Label added", { description: `Label "${newLabel.name}" created.` });
+      return newLabel;
     },
     updateCustomLabel: (labelId, updates) => {
       // Check for name uniqueness if name is being updated
@@ -266,19 +244,16 @@ export const useTaskStore = create<TaskStore>()(
       const labelToRemove = get().customLabels.find(l => l.id === labelIdToDelete);
       if (!labelToRemove) return;
 
-      const labelNameToRemoveOnTasks = labelToRemove.name;
-
       set((state) => ({
         customLabels: state.customLabels.filter((label) => label.id !== labelIdToDelete),
-        // Remove this label from all tasks in all projects
         projects: state.projects.map(project => ({
           ...project,
-          tasks: removeLabelFromTasksRecursive(project.tasks, labelNameToRemoveOnTasks), // Or labelToRemove.name if tasks store names
+          tasks: removeLabelFromTasksRecursive(project.tasks, labelIdToDelete), // Pass ID
         })),
-        // Also update activeLabelFilters if it contained the deleted label
-        activeLabelFilters: state.activeLabelFilters.filter(activeFilter => activeFilter !== labelNameToRemoveOnTasks), // Or labelToRemove.name
+        // activeLabelFilters now stores IDs
+        activeLabelFilters: state.activeLabelFilters.filter(activeFilterId => activeFilterId !== labelIdToDelete),
       }));
-      toast.info("Label deleted", { description: `Label "${labelNameToRemoveOnTasks}" and its associations removed.` });
+      toast.info("Label deleted", { description: `Label "${labelToRemove.name}" and its associations removed.` });
     },
 
     // --- UI Actions ---
@@ -291,11 +266,11 @@ export const useTaskStore = create<TaskStore>()(
       })),
 
     // --- Filter Actions ---
-    toggleLabelFilter: (label: string) =>
+    toggleLabelFilter: (labelId: string) => // Now accepts and stores label ID
       set((state) => ({
-        activeLabelFilters: state.activeLabelFilters.includes(label)
-          ? state.activeLabelFilters.filter((l) => l !== label)
-          : [...state.activeLabelFilters, label],
+        activeLabelFilters: state.activeLabelFilters.includes(labelId)
+          ? state.activeLabelFilters.filter((id) => id !== labelId)
+          : [...state.activeLabelFilters, labelId],
       })),
     clearLabelFilters: () => set({ activeLabelFilters: [] }),
     toggleStatusFilter: (filter: "active" | "completed") =>
@@ -312,6 +287,8 @@ export const useTaskStore = create<TaskStore>()(
     loadInitialData: () => {
       set({ _isInitializing_internal: true });
       const savedDataString = localStorage.getItem(LOCAL_STORAGE_KEY);
+      let loadedCustomLabels: LabelObject[] = []; // Temp var for labels
+
       let loadedSuccessfully = false;
       if (savedDataString) {
         try {
@@ -332,11 +309,26 @@ export const useTaskStore = create<TaskStore>()(
             }
 
             const activeProjectForStats = loadedProjects.find(p => p.id === activeProjId);
-
+            if (Array.isArray(savedData.customLabels) && savedData.customLabels.length > 0) {
+              loadedCustomLabels = savedData.customLabels.map((l: any) => ({ // Basic validation/mapping
+                id: l.id || crypto.randomUUID(),
+                name: l.name || "Unnamed Label",
+                emoji: l.emoji,
+                color: l.color,
+              }));
+            } else {
+              // No custom labels in localStorage, or array is empty. Seed with defaults.
+              loadedCustomLabels = DEFAULT_LABEL_DEFINITIONS.map(def => ({
+                id: crypto.randomUUID(),
+                name: def.name,
+                emoji: def.emoji,
+                color: def.color,
+              }));
+            }
             set({
               projects: loadedProjects,
               activeProjectId: activeProjId,
-              customLabels: Array.isArray(savedData.customLabels) ? savedData.customLabels : [],
+              customLabels: loadedCustomLabels,
               isManageLabelsDialogOpen: false, // Always start closed
               stats: activeProjectForStats ? calculateStats(activeProjectForStats.tasks) : { completed: 0, total: 0, percentage: 0 },
               activeLabelFilters: savedData.activeLabelFilters || [],
@@ -359,12 +351,19 @@ export const useTaskStore = create<TaskStore>()(
       }
 
       if (!loadedSuccessfully) {
+        loadedCustomLabels = DEFAULT_LABEL_DEFINITIONS.map(def => ({
+          id: crypto.randomUUID(),
+          name: def.name,
+          emoji: def.emoji,
+          color: def.color,
+        }));
+
         set({
           projects: [],
           activeProjectId: null,
-          customLabels: [],
-          isManageLabelsDialogOpen: false,
           stats: { completed: 0, total: 0, percentage: 0 },
+          customLabels: loadedCustomLabels,
+          isManageLabelsDialogOpen: false,
           activeLabelFilters: [],
           activeStatusFilter: null,
           isSidebarOpen: true,

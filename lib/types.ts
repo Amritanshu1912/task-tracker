@@ -68,7 +68,7 @@ export interface TaskStore {
   // --- ADD Label Management Actions ---
   openManageLabelsDialog: () => void;
   closeManageLabelsDialog: () => void;
-  addCustomLabel: (labelData: Omit<LabelObject, 'id'>) => void;
+  addCustomLabel: (labelData: Omit<LabelObject, 'id'>) => LabelObject | void;
   updateCustomLabel: (labelId: string, updates: Partial<Omit<LabelObject, 'id'>>) => void;
   deleteCustomLabel: (labelId: string) => void; // Will also remove from tasks
 
