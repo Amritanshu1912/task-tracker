@@ -36,7 +36,7 @@ export const useTaskStore = create<TaskStore>()(
     visibilityActionTrigger: 0,
     // --- ADD THIS LINE ---
     isAddTaskDialogOpen: false,
-
+    addTaskDialogPayload: null,
 
     // --- Project Actions ---
     addProject: (defaultName?: string) => {
@@ -192,14 +192,14 @@ export const useTaskStore = create<TaskStore>()(
     },
 
     // Actions for "Add Task to Project" Dialog
-    openAddTaskDialog: () => {
+    openAddTaskDialog: (payload) => {
       if (!get().activeProjectId) {
         toast.error("No active project", { description: "Select or create a project first to add tasks." });
         return;
       }
-      set({ isAddTaskDialogOpen: true });
+      set({ isAddTaskDialogOpen: true, addTaskDialogPayload: payload || null });
     },
-    closeAddTaskDialog: () => set({ isAddTaskDialogOpen: false }),
+    closeAddTaskDialog: () => set({ isAddTaskDialogOpen: false, addTaskDialogPayload: null }),
 
     // --- ADD Label Management Actions ---
     openManageLabelsDialog: () => set({ isManageLabelsDialogOpen: true }),

@@ -84,8 +84,6 @@ export const SidebarButton = ({
 };
 
 export function AppSidebar() {
-  // --- MODIFY THE STORE SELECTOR ---
-
   const isSidebarOpen = useTaskStore(
     (state: TaskStoreType) => state.isSidebarOpen
   );
@@ -95,9 +93,13 @@ export function AppSidebar() {
   const isAddTaskDialogOpen = useTaskStore(
     (state: TaskStoreType) => state.isAddTaskDialogOpen
   );
+  const addTaskDialogPayload = useTaskStore(
+    (state: TaskStoreType) => state.addTaskDialogPayload
+  );
   const closeAddTaskDialog = useTaskStore(
     (state: TaskStoreType) => state.closeAddTaskDialog
   );
+
   return (
     <>
       <aside
@@ -127,6 +129,7 @@ export function AppSidebar() {
         }}
         mode="createRootTask"
         parentId={undefined}
+        taskNumber={addTaskDialogPayload?.taskNumber} // Pass the number here
       />
     </>
   );

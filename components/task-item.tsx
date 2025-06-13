@@ -390,6 +390,11 @@ export const TaskItem = memo(function TaskItem({
           task={dialogMode === "edit" ? task : null}
           parentId={dialogMode === "createSubtask" ? task.id : undefined}
           mode={dialogMode}
+          taskNumber={
+            dialogMode === "edit"
+              ? taskNumber
+              : `${taskNumber}.${task.subtasks.length + 1}`
+          }
         />
       )}
 

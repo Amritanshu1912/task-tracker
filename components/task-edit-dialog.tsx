@@ -31,6 +31,7 @@ interface TaskEditDialogProps {
   task?: Task | null;
   parentId?: string; // For subtasks
   mode: "edit" | "createSubtask" | "createRootTask"; // createRootTask now means root for active project
+  taskNumber?: string; // ADD this prop
 }
 
 /**
@@ -43,6 +44,7 @@ export function TaskEditDialog({
   task,
   parentId,
   mode,
+  taskNumber,
 }: TaskEditDialogProps) {
   // Local state for form fields
   const [title, setTitle] = useState("");
@@ -161,7 +163,7 @@ export function TaskEditDialog({
     onOpenChange,
     storeUpdateTask,
     storeAddTask,
-    activeProjectId, // --- ADD activeProjectId to dependencies ---
+    activeProjectId,
   ]);
 
   return (
@@ -170,6 +172,11 @@ export function TaskEditDialog({
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">
             {dialogTitleText}
+            {taskNumber && (
+              <span className="ml-2 text-base font-normal text-muted-foreground">
+                ({taskNumber})
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
         <form

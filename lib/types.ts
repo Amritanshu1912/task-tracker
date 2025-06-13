@@ -62,7 +62,8 @@ export interface TaskStore {
 
   // State for "Add Task to Project" dialog (triggered from AppHeader)
   isAddTaskDialogOpen: boolean;
-  openAddTaskDialog: () => void;
+  addTaskDialogPayload: { taskNumber?: string } | null; // ADD this line
+  openAddTaskDialog: (payload?: { taskNumber?: string }) => void; // MODIFY this line
   closeAddTaskDialog: () => void;
 
   // --- ADD Label Management Actions ---
