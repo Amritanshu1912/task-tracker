@@ -32,7 +32,7 @@ export interface LabelObject {
 export interface TaskStore {
   projects: Project[];
   activeProjectId: string | null;
-  editingProjectId: string | null; // For inline project name editing
+  editingProjectId: string | null;
 
   customLabels: LabelObject[];
   isManageLabelsDialogOpen: boolean;

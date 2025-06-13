@@ -154,7 +154,7 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
   const startRename = useCallback(() => {
     if (isEditing) return; // Defensive guard
     setEditingProjectId(project.id);
-  }, [project.id, setEditingProjectId]);
+  }, [project.id, setEditingProjectId, isEditing]);
 
   const handleContextMenuOpenChange = useCallback((open: boolean) => {
     contextMenuOpenRef.current = open;
@@ -250,7 +250,7 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
                   "border-none ring-0 focus:ring-0 focus:outline-none",
                   "text-foreground placeholder:text-muted-foreground"
                 )}
-                autoFocus
+                // autoFocus
               />
             ) : (
               <>
