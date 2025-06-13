@@ -4,14 +4,15 @@ import { subscribeWithSelector } from "zustand/middleware";
 import type { TaskStore, Project, Task, RawTaskData, LabelObject } from "@/lib/types";
 import { throttle } from "lodash-es";
 import { toast } from "sonner";
-
 import {
   convertRawToFullTask,
   updateTaskInTree,
   addSubtaskToParentTree,
   deleteTaskFromTree,
   addLabelToTaskInTree,
-  calculateStats, getNextDefaultProjectName, removeLabelFromTasksRecursive
+  calculateStats,
+  getNextDefaultProjectName,
+  removeLabelFromTasksRecursive
 } from "./task-utils";
 import { DEFAULT_LABEL_DEFINITIONS } from "./labels";
 

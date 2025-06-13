@@ -1,23 +1,21 @@
 // components/sidebar/sidebar-stats.tsx
 "use client";
 
-import { CircleCheck, Circle, Target } from "lucide-react"; // Icons for stats
-import type { TaskStore } from "@/lib/types"; // For stats type
+import { CircleCheck, Circle, Target } from "lucide-react";
+import type { TaskStore } from "@/lib/types";
 
 interface SidebarStatsProps {
-  stats: TaskStore["stats"]; // Use the specific stats type from TaskStore
+  stats: TaskStore["stats"];
   isSidebarOpen: boolean;
 }
 
 export function SidebarStats({ stats, isSidebarOpen }: SidebarStatsProps) {
   if (!isSidebarOpen) {
-    return null; // Don't render stats if sidebar is collapsed to icon-only mode
+    return null;
   }
 
   return (
     <div className="bg-muted/30 border-b border-border/30 flex-shrink-0 px-4 py-3">
-      {" "}
-      {/* Adjusted padding */}
       <div className="grid grid-cols-3 gap-3 text-center">
         <div className="flex flex-col gap-1">
           <div className="text-lg font-bold text-green-500 flex items-center justify-center gap-1.5">

@@ -18,7 +18,7 @@ import {
   MoreVertical,
   Plus,
   Trash2,
-  Edit3,
+  Edit2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -52,7 +52,7 @@ const TaskActionsMenuContent = ({
   return (
     <>
       <Item onClick={onEdit}>
-        <Edit3 className="mr-2 h-4 w-4" /> Edit Task
+        <Edit2 className="mr-2 h-4 w-4" /> Edit Task
       </Item>
       <Item onClick={onAddSubtask}>
         <Plus className="mr-2 h-4 w-4" /> Add Subtask
