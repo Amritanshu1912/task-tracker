@@ -13,10 +13,11 @@ import {
   ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { Edit3, Trash2, Download } from "lucide-react";
+import { Edit2, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { exportToJson, cn } from "@/lib/utils";
 import type { Project, TaskStore as TaskStoreType } from "@/lib/types";
+import { Button } from "../ui/button";
 
 interface SidebarProjectListProps {
   isSidebarOpen: boolean;
@@ -25,7 +26,6 @@ interface SidebarProjectListProps {
 export function SidebarProjectList({ isSidebarOpen }: SidebarProjectListProps) {
   const projects = useTaskStore((state) => state.projects);
 
-  // When sidebar is collapsed, list is hidden
   if (!isSidebarOpen) return null;
 
   if (projects.length === 0) {
@@ -170,12 +170,6 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
     [isEditing, startRename]
   );
 
-  const handleItemDoubleClick = useCallback(() => {
-    if (!isEditing) {
-      startRename();
-    }
-  }, [isEditing, startRename]);
-
   const handleItemClick = useCallback(() => {
     if (!isEditing) {
       setActiveProject(project.id);
@@ -216,21 +210,21 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
           asChild
           onFocus={(e) => isEditing && e.stopPropagation()}
         >
+          {/* --- MODIFIED: Added `group` for hover effects --- */}
           <div
             className={cn(
-              "flex items-center w-full h-9 px-3 gap-3 rounded-sm cursor-pointer group relative", // Standard item height & padding
+              "flex items-center w-full h-9 px-3 gap-3 rounded-sm cursor-pointer group relative",
               "transition-colors duration-150 ease-in-out",
               isActive &&
                 !isEditing &&
-                "bg-accent text-accent-foreground font-medium", // Active state style
+                "bg-accent text-accent-foreground font-medium",
               !isActive &&
                 !isEditing &&
-                "text-muted-foreground hover:bg-accent hover:text-accent-foreground", // Default & hover
-              isEditing && "bg-muted ring-1 ring-primary/50" // Visual cue for editing the whole item
+                "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              isEditing && "bg-muted ring-1 ring-primary/50"
             )}
             onClick={handleItemClick}
             onKeyDown={handleItemKeyDown}
-            onDoubleClick={handleItemDoubleClick}
             tabIndex={0} // Always tabbable if not editing (input will be tabbable when editing)
             aria-current={isActive ? "page" : undefined}
             title={
@@ -253,24 +247,52 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
                 onClick={(e) => e.stopPropagation()}
                 className={cn(
                   "flex-1 bg-transparent outline-none p-0 m-0 text-sm font-medium w-full",
-                  "border-none ring-0 focus:ring-0 focus:outline-none", // Ensure focus styles don't interfere
+                  "border-none ring-0 focus:ring-0 focus:outline-none",
                   "text-foreground placeholder:text-muted-foreground"
                 )}
                 autoFocus
               />
             ) : (
-              <span
-                className={cn(
-                  "flex-1 truncate text-sm min-w-0", // min-w-0 for proper truncation in flex
-                  isActive
-                    ? "font-medium text-accent-foreground"
-                    : "font-normal"
-                )}
-              >
-                {project.name}
-              </span>
+              <>
+                <span
+                  className={cn(
+                    "flex-1 truncate text-sm min-w-0",
+                    isActive
+                      ? "font-medium text-accent-foreground"
+                      : "font-normal"
+                  )}
+                >
+                  {project.name}
+                </span>
+                {/* --- NEW: Hover-to-show action icons --- */}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-100">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground/50 hover:text-muted-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startRename();
+                    }}
+                    title="Rename project"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive/50 hover:text-destructive/80"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteInitiate(project);
+                    }}
+                    title="Delete project"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </>
             )}
-            {/* Active project indicator - vertical bar on the left */}
             {!isEditing && isActive && (
               <div className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 bg-primary rounded-r-full"></div>
             )}
@@ -281,7 +303,7 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
           <ContextMenuItem onSelect={startRename} disabled={isEditing}>
-            <Edit3 className="mr-2 h-4 w-4" />
+            <Edit2 className="mr-2 h-4 w-4" />
             Rename Project
             <span className="ml-auto text-xs text-muted-foreground">F2</span>
           </ContextMenuItem>
@@ -300,7 +322,7 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-      {projectToDelete && ( // Conditionally render dialog
+      {projectToDelete && (
         <ConfirmationDialog
           isOpen={isDeleteConfirmOpen}
           onOpenChange={setIsDeleteConfirmOpen}
