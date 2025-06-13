@@ -68,7 +68,7 @@ export function SidebarSectionProject({
   return (
     <div className={cn("space-y-1", isSidebarOpen ? "mb-1" : "mb-2")}>
       <div
-        className="flex items-center justify-between gap-2 h-7 mb-1 cursor-pointer group rounded-md hover:bg-accent/50 px-1 -mx-1"
+        className="flex items-center justify-between gap-2 h-10 mb-1 cursor-pointer group rounded-md hover:bg-accent/50 px-1 -mx-1"
         onClick={handleToggleCollapse}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -90,7 +90,7 @@ export function SidebarSectionProject({
             </span>
           </h3>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <SidebarButtonComponent
             icon={Plus}
             label=""
@@ -99,7 +99,7 @@ export function SidebarSectionProject({
             isSidebarOpen={isSidebarOpen}
             tooltip="Add New Project"
             variant="ghost"
-            className="h-6 w-6 p-0 mr-1 text-muted-foreground hover:text-primary"
+            className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
           />
           {isSectionContentVisible ? (
             <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-accent-foreground transition-colors" />

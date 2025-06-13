@@ -124,7 +124,7 @@ const SidebarSection = ({
       {/* Section header with title and collapse toggle */}
       {isSidebarOpen && title && (
         <div
-          className="flex items-center justify-between gap-2 h-7 mb-1 cursor-pointer group rounded-md hover:bg-accent/50 px-1 -mx-1"
+          className="flex items-center justify-between gap-2 h-10 mb-1 cursor-pointer group rounded-md hover:bg-accent/50 px-1 -mx-1"
           onClick={handleToggleCollapse}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {

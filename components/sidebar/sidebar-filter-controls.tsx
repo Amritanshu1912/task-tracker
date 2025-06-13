@@ -100,7 +100,7 @@ export function SidebarFilterControls({
   }
 
   return (
-    <>
+    <div className="px-1 pb-1">
       {/* Label Filters Section */}
       <div className="flex items-center justify-between h-7 mb-1.5">
         <span className="text-[13px] font-medium text-muted-foreground">
@@ -162,7 +162,7 @@ export function SidebarFilterControls({
           icon={<CheckCircle className="w-3.5 h-3.5" />}
         />
       </div>
-    </>
+    </div>
   );
 }
 // --- END OF FILE components/sidebar/sidebar-filter-controls.tsx ---
