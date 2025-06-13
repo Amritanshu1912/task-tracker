@@ -31,7 +31,7 @@ const FilterSubSection = ({
   return (
     <div>
       <div
-        className="flex items-center justify-between h-7 mb-1.5 cursor-pointer group"
+        className="flex items-center justify-between h-7 mb-1 cursor-pointer group"
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") setIsOpen(!isOpen);
@@ -64,7 +64,7 @@ const FilterSubSection = ({
               collapsed: { opacity: 0, height: 0, marginTop: "0" },
             }}
             transition={{ duration: 0.2, ease: [0.04, 0.62, 0.23, 0.98] }}
-            className="overflow-hidden"
+            className="overflow-hidden p-1"
           >
             {children}
           </motion.div>
@@ -94,27 +94,27 @@ const FilterBadge = ({
   icon?: React.ReactNode;
 }) => (
   <Badge
-    variant="outline"
     onClick={onToggle}
+    variant="outline"
     className={cn(
       "cursor-pointer text-xs transition-all duration-200 flex items-center gap-1.5",
-      "hover:scale-105 active:scale-95 py-1 px-2 rounded-full border",
-      isActive
-        ? "font-semibold ring-1 ring-offset-1 ring-offset-background"
-        : "hover:bg-accent hover:text-accent-foreground border-border"
+      "hover:opacity-80 active:scale-95 py-1 px-2.5 rounded-full border-2",
+      "focus-visible-ring",
+      // Ternary logic to handle different badge types
+      labelColor
+        ? // Styles for COLORED labels (This logic is now simpler because we don't need to define the unselected state)
+          isActive && "text-white"
+        : // Styles for STATUS filters
+        isActive
+        ? "bg-accent border-primary/50 text-primary" // This now correctly OVERRIDES the neutral 'outline' variant
+        : "text-muted-foreground" // When inactive, just use the default 'outline' text color
     )}
     style={
-      isActive && labelColor
+      labelColor
         ? {
-            backgroundColor: `${labelColor}4D`,
-            borderColor: labelColor,
-            color: labelColor,
-          }
-        : !isActive && labelColor
-        ? {
-            backgroundColor: `${labelColor}1A`,
-            borderColor: `${labelColor}60`,
-            color: labelColor,
+            backgroundColor: isActive ? `${labelColor}80` : `${labelColor}20`,
+            borderColor: isActive ? labelColor : `${labelColor}80`,
+            color: isActive ? "#fff" : `${labelColor}95`,
           }
         : {}
     }
