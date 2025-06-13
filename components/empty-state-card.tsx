@@ -76,7 +76,7 @@ export function EmptyStateCard() {
           <Button
             size="lg"
             // --- MODIFY HERE: Call openAddTaskDialog ---
-            onClick={openAddTaskDialog}
+            onClick={() => openAddTaskDialog()}
             className="w-full sm:w-auto"
             disabled={!activeProjectId} // Disable if somehow no active project (though this card implies one)
           >
