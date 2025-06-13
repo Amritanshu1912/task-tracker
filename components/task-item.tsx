@@ -26,9 +26,40 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { TaskEditDialog } from "./task-edit-dialog";
 import { cn } from "@/lib/utils";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"; // For delete confirmation
+
+const TaskActionsMenuContent = ({
+  onEdit,
+  onAddSubtask,
+  onDelete,
+}: {
+  onEdit: () => void;
+  onAddSubtask: () => void;
+  onDelete: () => void;
+}) => (
+  <>
+    <ContextMenuItem onClick={onEdit}>
+      <Edit3 className="mr-2 h-4 w-4" /> Edit Task
+    </ContextMenuItem>
+    <ContextMenuItem onClick={onAddSubtask}>
+      <Plus className="mr-2 h-4 w-4" /> Add Subtask
+    </ContextMenuItem>
+    <ContextMenuItem
+      onClick={onDelete}
+      className="text-destructive focus:text-destructive"
+    >
+      <Trash2 className="mr-2 h-4 w-4" /> Delete Task
+    </ContextMenuItem>
+  </>
+);
 
 interface TaskItemProps {
   task: Task;
@@ -200,165 +231,170 @@ export const TaskItem = memo(function TaskItem({
 
   return (
     <>
-      <div className={taskItemClasses}>
-        <div className="p-3 flex items-start gap-3">
-          <div
-            className="w-6 h-6 flex items-center justify-center cursor-pointer mt-1 shrink-0"
-            onClick={handleToggleChevronCollapse}
-            role="button"
-            aria-expanded={showSubtasks}
-            aria-label={
-              isEffectivelyCollapsed ? "Expand subtasks" : "Collapse subtasks"
-            }
-            tabIndex={hasSubtasks ? 0 : -1}
-            onKeyDown={(e) => {
-              if (hasSubtasks && (e.key === "Enter" || e.key === " ")) {
-                e.preventDefault();
-                handleToggleChevronCollapse(e as any);
-              }
-            }}
-          >
-            {hasSubtasks &&
-              (isEffectivelyCollapsed ? (
-                <ChevronRight className="text-muted-foreground h-4 w-4" />
-              ) : (
-                <ChevronDown className="text-muted-foreground h-4 w-4" />
-              ))}
-          </div>
+      <ContextMenu>
+        <div className={taskItemClasses}>
+          <ContextMenuTrigger>
+            <div className="p-3 flex items-start gap-3">
+              <div
+                className="w-6 h-6 flex items-center justify-center cursor-pointer mt-1 shrink-0"
+                onClick={handleToggleChevronCollapse}
+                role="button"
+                aria-expanded={showSubtasks}
+                aria-label={
+                  isEffectivelyCollapsed
+                    ? "Expand subtasks"
+                    : "Collapse subtasks"
+                }
+                tabIndex={hasSubtasks ? 0 : -1}
+                onKeyDown={(e) => {
+                  if (hasSubtasks && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    handleToggleChevronCollapse(e as any);
+                  }
+                }}
+              >
+                {hasSubtasks &&
+                  (isEffectivelyCollapsed ? (
+                    <ChevronRight className="text-muted-foreground h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="text-muted-foreground h-4 w-4" />
+                  ))}
+              </div>
 
-          <Checkbox
-            checked={task.completed}
-            onCheckedChange={handleToggleComplete}
-            className="mt-1.5 shrink-0" // Adjusted margin for better alignment
-            aria-labelledby={`task-title-${task.id}`}
-          />
+              <Checkbox
+                checked={task.completed}
+                onCheckedChange={handleToggleComplete}
+                className="mt-1.5 shrink-0"
+                aria-labelledby={`task-title-${task.id}`}
+              />
 
-          <div className="min-w-[60px] sm:min-w-[50px] text-xs bg-muted px-2 py-1 rounded text-center mt-1">
-            {taskNumber}
-          </div>
+              <div className="min-w-[60px] sm:min-w-[50px] text-xs bg-muted px-2 py-1 rounded text-center mt-1">
+                {taskNumber}
+              </div>
 
-          <div className="flex-1 min-w-0">
-            {/* min-w-0 for proper truncation */}
+              <div className="flex-1 min-w-0">
+                <div
+                  id={`task-title-${task.id}`}
+                  contentEditable={isEditingTitle}
+                  suppressContentEditableWarning
+                  onFocus={() => setIsEditingTitle(true)}
+                  onBlur={handleTitleChange}
+                  className={cn(
+                    "outline-none rounded px-2 py-1 text-sm",
+                    isEditingTitle && "bg-muted ring-1 ring-ring",
+                    task.completed &&
+                      "line-through text-muted-foreground opacity-80"
+                  )}
+                >
+                  {task.title}
+                </div>
+
+                {hasNotes && !areAllNotesCollapsed && (
+                  <div
+                    contentEditable={isEditingNotes}
+                    suppressContentEditableWarning
+                    onFocus={() => setIsEditingNotes(true)}
+                    onBlur={handleNotesChange}
+                    className={cn(
+                      "text-sm text-muted-foreground outline-none rounded px-2 py-1 whitespace-pre-wrap",
+                      isEditingNotes ? "bg-muted ring-1 ring-ring" : "italic",
+                      task.completed && "line-through opacity-70"
+                    )}
+                  >
+                    {task.notes}
+                  </div>
+                )}
+                {resolvedLabels.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {resolvedLabels.map((labelObj) => (
+                      <Badge
+                        key={labelObj.id}
+                        variant="outline"
+                        className="text-xs px-1.5 py-0.5 font-normal"
+                        style={
+                          labelObj.color
+                            ? {
+                                backgroundColor: `${labelObj.color}20`,
+                                borderColor: `${labelObj.color}80`,
+                                color: labelObj.color,
+                              }
+                            : {}
+                        }
+                      >
+                        {labelObj.emoji && (
+                          <span className="mr-1">{labelObj.emoji}</span>
+                        )}
+                        {labelObj.name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="task-actions shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {/* --- REFACTORED: Use the shared menu content --- */}
+                    <TaskActionsMenuContent
+                      onEdit={handleEditTask}
+                      onAddSubtask={handleOpenAddSubtaskDialog}
+                      onDelete={handleDeleteInitiate}
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </ContextMenuTrigger>
+
+          {showSubtasks && task.subtasks && task.subtasks.length > 0 && (
             <div
-              id={`task-title-${task.id}`}
-              contentEditable={isEditingTitle}
-              suppressContentEditableWarning
-              onFocus={() => setIsEditingTitle(true)}
-              onBlur={handleTitleChange}
               className={cn(
-                "outline-none rounded px-2 py-1 text-sm",
-                isEditingTitle && "bg-muted ring-1 ring-ring",
-                task.completed &&
-                  "line-through text-muted-foreground opacity-80"
+                "pl-10 pr-3 pb-3 ml-5",
+                level < 1
+                  ? "border-l-2 border-border"
+                  : "border-l-2 border-border/50 hover:border-border/70"
               )}
             >
-              {task.title}
+              {task.subtasks.map(
+                (subtask, index) =>
+                  taskMatchesFilters(
+                    subtask,
+                    activeLabelFilters,
+                    activeStatusFilter
+                  ) && (
+                    <div key={subtask.id} className="mt-2 first:mt-0">
+                      <TaskItem
+                        task={subtask}
+                        taskNumber={`${taskNumber}.${index + 1}`}
+                        parentId={task.id}
+                        level={level + 1}
+                      />
+                    </div>
+                  )
+              )}
             </div>
-
-            {hasNotes && !areAllNotesCollapsed && (
-              <div
-                contentEditable={isEditingNotes}
-                suppressContentEditableWarning
-                onFocus={() => setIsEditingNotes(true)}
-                onBlur={handleNotesChange}
-                className={cn(
-                  "text-sm text-muted-foreground outline-none rounded px-2 py-1 whitespace-pre-wrap",
-                  isEditingNotes ? "bg-muted ring-1 ring-ring" : "italic",
-                  task.completed && "line-through opacity-70"
-                )}
-              >
-                {task.notes}
-              </div>
-            )}
-            {/* --- MODIFIED Label Display --- */}
-            {resolvedLabels.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {resolvedLabels.map((labelObj) => (
-                  <Badge
-                    key={labelObj.id}
-                    variant="outline"
-                    className="text-xs px-1.5 py-0.5 font-normal" // font-normal for less emphasis
-                    style={
-                      labelObj.color
-                        ? {
-                            backgroundColor: `${labelObj.color}20`, // Use color with alpha for background
-                            borderColor: `${labelObj.color}80`, // Use color with alpha for border
-                            color: labelObj.color, // Use full color for text for better contrast potentially
-                          }
-                        : {}
-                    }
-                  >
-                    {labelObj.emoji && (
-                      <span className="mr-1">{labelObj.emoji}</span>
-                    )}
-                    {labelObj.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="task-actions shrink-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleEditTask}>
-                  <Edit3 className="mr-2 h-4 w-4" /> Edit Task
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleOpenAddSubtaskDialog}>
-                  <Plus className="mr-2 h-4 w-4" /> Add Subtask
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleDeleteInitiate} // Use new handler
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete Task
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          )}
         </div>
-
-        {showSubtasks && task.subtasks && task.subtasks.length > 0 && (
-          <div
-            className={cn(
-              "pl-10 pr-3 pb-3 ml-5", // Adjusted padding/margin
-              level < 1
-                ? "border-l-2 border-border"
-                : "border-l-2 border-border/50 hover:border-border/70"
-            )}
-          >
-            {task.subtasks.map(
-              (subtask, index) =>
-                taskMatchesFilters(
-                  subtask,
-                  activeLabelFilters,
-                  activeStatusFilter
-                ) && (
-                  <div key={subtask.id} className="mt-2 first:mt-0">
-                    <TaskItem
-                      task={subtask}
-                      taskNumber={`${taskNumber}.${index + 1}`}
-                      parentId={task.id} // Correct parentId for subtask's context
-                      level={level + 1}
-                    />
-                  </div>
-                )
-            )}
-          </div>
-        )}
-      </div>
+        {/* --- NEW: ContextMenu Content --- */}
+        <ContextMenuContent>
+          <TaskActionsMenuContent
+            onEdit={handleEditTask}
+            onAddSubtask={handleOpenAddSubtaskDialog}
+            onDelete={handleDeleteInitiate}
+          />
+        </ContextMenuContent>
+      </ContextMenu>
 
       {isEditDialogOpen && (
         <TaskEditDialog
           isOpen={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           task={dialogMode === "edit" ? task : null}
-          // parentId is for the *new* subtask being created. It's the current task.id.
           parentId={dialogMode === "createSubtask" ? task.id : undefined}
           mode={dialogMode}
         />
