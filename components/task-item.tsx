@@ -1,12 +1,12 @@
 // components/task-item.tsx
 "use client";
 
-import React, { useState, useEffect, useCallback, memo, useMemo } from "react"; // Added React
+import React, { useState, useEffect, useCallback, memo, useMemo } from "react";
 import type {
   Task,
   LabelObject,
   TaskStore as TaskStoreType,
-} from "@/lib/types"; // Added LabelObject, TaskStoreType
+} from "@/lib/types";
 import { taskMatchesFilters } from "../lib/filters";
 import { useTaskStore } from "@/lib/store";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,43 +23,49 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuItem, // Import DropdownMenuItem
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   ContextMenu,
   ContextMenuContent,
-  ContextMenuItem,
+  ContextMenuItem, // Import ContextMenuItem
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { TaskEditDialog } from "./task-edit-dialog";
 import { cn } from "@/lib/utils";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"; // For delete confirmation
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
+// --- REFACTORED: The shared component now accepts the Item component as a prop ---
 const TaskActionsMenuContent = ({
+  ItemComponent,
   onEdit,
   onAddSubtask,
   onDelete,
 }: {
+  ItemComponent: typeof DropdownMenuItem | typeof ContextMenuItem; // The component to render
   onEdit: () => void;
   onAddSubtask: () => void;
   onDelete: () => void;
-}) => (
-  <>
-    <ContextMenuItem onClick={onEdit}>
-      <Edit3 className="mr-2 h-4 w-4" /> Edit Task
-    </ContextMenuItem>
-    <ContextMenuItem onClick={onAddSubtask}>
-      <Plus className="mr-2 h-4 w-4" /> Add Subtask
-    </ContextMenuItem>
-    <ContextMenuItem
-      onClick={onDelete}
-      className="text-destructive focus:text-destructive"
-    >
-      <Trash2 className="mr-2 h-4 w-4" /> Delete Task
-    </ContextMenuItem>
-  </>
-);
+}) => {
+  const Item = ItemComponent; // Assign to a capitalized variable for JSX
+  return (
+    <>
+      <Item onClick={onEdit}>
+        <Edit3 className="mr-2 h-4 w-4" /> Edit Task
+      </Item>
+      <Item onClick={onAddSubtask}>
+        <Plus className="mr-2 h-4 w-4" /> Add Subtask
+      </Item>
+      <Item
+        onClick={onDelete}
+        className="text-destructive focus:text-destructive"
+      >
+        <Trash2 className="mr-2 h-4 w-4" /> Delete Task
+      </Item>
+    </>
+  );
+};
 
 interface TaskItemProps {
   task: Task;
@@ -80,18 +86,14 @@ export const TaskItem = memo(function TaskItem({
   const [dialogMode, setDialogMode] = useState<"edit" | "createSubtask">(
     "edit"
   );
-
-  // For delete confirmation
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
-  // Select store actions and relevant state individually
   const storeUpdateTask = useTaskStore(
     (state: TaskStoreType) => state.updateTask
   );
   const storeDeleteTask = useTaskStore(
     (state: TaskStoreType) => state.deleteTask
   );
-  // storeAddTask is not used directly by TaskItem, but by its TaskEditDialog for subtasks
   const areAllNotesCollapsed = useTaskStore(
     (state: TaskStoreType) => state.areAllNotesCollapsed
   );
@@ -103,13 +105,13 @@ export const TaskItem = memo(function TaskItem({
   );
   const activeLabelFilters = useTaskStore(
     (state: TaskStoreType) => state.activeLabelFilters
-  ); // Now label IDs
+  );
   const activeStatusFilter = useTaskStore(
     (state: TaskStoreType) => state.activeStatusFilter
   );
   const customLabels = useTaskStore(
     (state: TaskStoreType) => state.customLabels
-  ); // For displaying label details
+  );
 
   const hasSubtasks = task.subtasks && task.subtasks.length > 0;
   const hasNotes = task.notes && task.notes.trim() !== "";
@@ -118,54 +120,47 @@ export const TaskItem = memo(function TaskItem({
     boolean | null
   >(null);
 
-  // Effect to reset manual override when a global action occurs
   useEffect(() => {
     if (hasSubtasks) {
-      // Only reset if it can be collapsed/expanded
       setManualCollapseOverride(null);
     }
   }, [visibilityActionTrigger, hasSubtasks]);
 
   const isEffectivelyCollapsed = useMemo(() => {
     if (!hasSubtasks) return true;
-
     if (manualCollapseOverride !== null) {
       return manualCollapseOverride;
     }
-    // Global setting from store
     if (
       maxVisibleDepthFromStore !== null &&
       level >= maxVisibleDepthFromStore
     ) {
       return true;
     }
-    return false; // Default to expanded
+    return false;
   }, [hasSubtasks, manualCollapseOverride, maxVisibleDepthFromStore, level]);
 
   const handleToggleChevronCollapse = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (hasSubtasks) {
-        // When user clicks, set or toggle the manual override
         setManualCollapseOverride((prevOverride) => {
           if (prevOverride !== null) {
-            return !prevOverride; // Toggle existing manual state
+            return !prevOverride;
           }
-          // If no manual override, determine current state based on global and toggle that
           const currentlyGloballyOrImplicitlyCollapsed =
             (maxVisibleDepthFromStore !== null &&
               level >= maxVisibleDepthFromStore) ||
-            false; // false if maxVisibleDepthFromStore is null
+            false;
           return !currentlyGloballyOrImplicitlyCollapsed;
         });
       }
     },
-    [hasSubtasks, maxVisibleDepthFromStore, level] // Add dependencies
+    [hasSubtasks, maxVisibleDepthFromStore, level]
   );
 
   const handleToggleComplete = useCallback(
     (checked: boolean) => {
-      // Call storeUpdateTask without sectionId
       storeUpdateTask(task.id, { completed: checked });
     },
     [storeUpdateTask, task.id]
@@ -173,7 +168,6 @@ export const TaskItem = memo(function TaskItem({
 
   const handleTitleChange = useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
-      // Call storeUpdateTask without sectionId
       storeUpdateTask(task.id, { title: e.target.textContent || task.title });
       setIsEditingTitle(false);
     },
@@ -183,7 +177,6 @@ export const TaskItem = memo(function TaskItem({
   const handleNotesChange = useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
       const newNotes = e.target.innerText || "";
-      // Call storeUpdateTask without sectionId
       storeUpdateTask(task.id, { notes: newNotes });
       setIsEditingTitle(false);
     },
@@ -196,7 +189,6 @@ export const TaskItem = memo(function TaskItem({
 
   const handleConfirmDelete = useCallback(() => {
     storeDeleteTask(task.id);
-    // Toast can be added in the store action or here if preferred
   }, [storeDeleteTask, task.id]);
 
   const handleEditTask = useCallback(() => {
@@ -209,12 +201,11 @@ export const TaskItem = memo(function TaskItem({
     setIsEditDialogOpen(true);
   }, []);
 
-  // Memoize resolved labels to prevent re-computation on every render
   const resolvedLabels = useMemo(() => {
     if (!task.labels || task.labels.length === 0) return [];
     return task.labels
       .map((labelId) => customLabels.find((cl) => cl.id === labelId))
-      .filter(Boolean) as LabelObject[]; // Filter out undefined if a labelId is somehow invalid
+      .filter(Boolean) as LabelObject[];
   }, [task.labels, customLabels]);
 
   const showSubtasks = hasSubtasks && !isEffectivelyCollapsed;
@@ -232,8 +223,8 @@ export const TaskItem = memo(function TaskItem({
   return (
     <>
       <ContextMenu>
-        <div className={taskItemClasses}>
-          <ContextMenuTrigger>
+        <ContextMenuTrigger>
+          <div className={taskItemClasses}>
             <div className="p-3 flex items-start gap-3">
               <div
                 className="w-6 h-6 flex items-center justify-center cursor-pointer mt-1 shrink-0"
@@ -339,8 +330,9 @@ export const TaskItem = memo(function TaskItem({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {/* --- REFACTORED: Use the shared menu content --- */}
+                    {/* --- FIXED: Pass the correct ItemComponent --- */}
                     <TaskActionsMenuContent
+                      ItemComponent={DropdownMenuItem}
                       onEdit={handleEditTask}
                       onAddSubtask={handleOpenAddSubtaskDialog}
                       onDelete={handleDeleteInitiate}
@@ -349,40 +341,41 @@ export const TaskItem = memo(function TaskItem({
                 </DropdownMenu>
               </div>
             </div>
-          </ContextMenuTrigger>
 
-          {showSubtasks && task.subtasks && task.subtasks.length > 0 && (
-            <div
-              className={cn(
-                "pl-10 pr-3 pb-3 ml-5",
-                level < 1
-                  ? "border-l-2 border-border"
-                  : "border-l-2 border-border/50 hover:border-border/70"
-              )}
-            >
-              {task.subtasks.map(
-                (subtask, index) =>
-                  taskMatchesFilters(
-                    subtask,
-                    activeLabelFilters,
-                    activeStatusFilter
-                  ) && (
-                    <div key={subtask.id} className="mt-2 first:mt-0">
-                      <TaskItem
-                        task={subtask}
-                        taskNumber={`${taskNumber}.${index + 1}`}
-                        parentId={task.id}
-                        level={level + 1}
-                      />
-                    </div>
-                  )
-              )}
-            </div>
-          )}
-        </div>
-        {/* --- NEW: ContextMenu Content --- */}
+            {showSubtasks && task.subtasks && task.subtasks.length > 0 && (
+              <div
+                className={cn(
+                  "pl-10 pr-3 pb-3 ml-5",
+                  level < 1
+                    ? "border-l-2 border-border"
+                    : "border-l-2 border-border/50 hover:border-border/70"
+                )}
+              >
+                {task.subtasks.map(
+                  (subtask, index) =>
+                    taskMatchesFilters(
+                      subtask,
+                      activeLabelFilters,
+                      activeStatusFilter
+                    ) && (
+                      <div key={subtask.id} className="mt-2 first:mt-0">
+                        <TaskItem
+                          task={subtask}
+                          taskNumber={`${taskNumber}.${index + 1}`}
+                          parentId={task.id}
+                          level={level + 1}
+                        />
+                      </div>
+                    )
+                )}
+              </div>
+            )}
+          </div>
+        </ContextMenuTrigger>
         <ContextMenuContent>
+          {/* --- FIXED: Pass the correct ItemComponent --- */}
           <TaskActionsMenuContent
+            ItemComponent={ContextMenuItem}
             onEdit={handleEditTask}
             onAddSubtask={handleOpenAddSubtaskDialog}
             onDelete={handleDeleteInitiate}
