@@ -411,7 +411,6 @@ export const useTaskStore = create<TaskStore>()(
           projects: [...state.projects, newProject],
           _isInitializing_internal: false,
         }));
-        toast.success("Project Imported", { description: `Project "${newProject.name}" has been added.` });
       } else {
         console.error("dangerouslyOverwriteState (import project): Invalid data provided.", importedData);
         toast.error("Import Error", { description: "Cannot import project due to invalid data structure." });
