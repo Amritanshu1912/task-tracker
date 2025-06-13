@@ -18,8 +18,8 @@ import {
   DatabaseZap,
   ChevronDown,
   ChevronRight,
-  Tags, // New icon for Labels or Settings
-  Settings2, // Alternative for Settings
+  Tags,
+  Settings2,
 } from "lucide-react";
 import { useTaskStore } from "@/lib/store";
 import type { TaskStore as TaskStoreType } from "@/lib/types";
@@ -296,25 +296,6 @@ export function SidebarMainContent({
         {isSidebarOpen && <Separator className="my-3" />}
 
         <SidebarSection
-          title="Workspace"
-          icon={Settings2} // Or Tags, or a cog icon
-          isSidebarOpen={isSidebarOpen}
-          defaultOpen={false}
-          SidebarButtonComponent={SidebarButtonComponent}
-        >
-          <SidebarButtonComponent
-            icon={Tags} // Icon for managing labels
-            label="Manage Labels"
-            onClick={openManageLabelsDialog}
-            isSidebarOpen={isSidebarOpen}
-            tooltip="Manage Custom Labels"
-          />
-          {/* Future settings can go here */}
-        </SidebarSection>
-
-        {isSidebarOpen && <Separator className="my-3" />}
-
-        <SidebarSection
           title="View Controls"
           icon={Eye}
           isSidebarOpen={isSidebarOpen}
@@ -361,12 +342,20 @@ export function SidebarMainContent({
         {isSidebarOpen && <Separator className="my-3" />}
 
         <SidebarSection
-          title="Data Management"
-          icon={DatabaseZap}
+          title="Workspace Controls"
+          icon={Settings2} // Or Tags, or a cog icon
           isSidebarOpen={isSidebarOpen}
-          defaultOpen={false} // Default to closed
+          defaultOpen={false}
           SidebarButtonComponent={SidebarButtonComponent}
         >
+          <SidebarButtonComponent
+            icon={Tags} // Icon for managing labels
+            label="Manage Labels"
+            onClick={openManageLabelsDialog}
+            isSidebarOpen={isSidebarOpen}
+            tooltip="Manage Custom Labels"
+          />
+
           <SidebarButtonComponent
             icon={Save}
             label="Save Progress"
@@ -390,7 +379,6 @@ export function SidebarMainContent({
           />
         </SidebarSection>
       </div>
-      {/* --- ADD ManageLabelsDialog rendering --- */}
       <ManageLabelsDialog />
     </>
   );
