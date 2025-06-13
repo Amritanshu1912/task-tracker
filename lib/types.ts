@@ -93,7 +93,7 @@ export interface TaskStore {
   // Persistence and Data
   loadInitialData: () => void;
   saveToLocalStorage: () => void;
-  dangerouslyOverwriteState: (importedData: { projectName?: string; tasks: RawTaskData[] }) => void;
+  dangerouslyOverwriteState: (importedData: { projectName?: string; tasks: RawTaskData[] }) => string | undefined;
 }
 
 // RawTaskData is used for initial data loading and import/export

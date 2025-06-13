@@ -398,6 +398,8 @@ export const useTaskStore = create<TaskStore>()(
       }
     },
     dangerouslyOverwriteState: (importedData: { projectName?: string; tasks: RawTaskData[] }) => {
+      let newProjectId: string | undefined = undefined;
+
       if (importedData && Array.isArray(importedData.tasks)) {
         set({ _isInitializing_internal: true });
         const newProjectName = importedData.projectName || getNextDefaultProjectName(get().projects);
@@ -408,6 +410,8 @@ export const useTaskStore = create<TaskStore>()(
           tasks: importedData.tasks.map(convertRawToFullTask),
         };
 
+        newProjectId = newProject.id; // Capture the new ID
+
         set((state) => ({
           projects: [...state.projects, newProject],
           _isInitializing_internal: false,
@@ -416,6 +420,7 @@ export const useTaskStore = create<TaskStore>()(
         console.error("dangerouslyOverwriteState (import project): Invalid data provided.", importedData);
         toast.error("Import Error", { description: "Cannot import project due to invalid data structure." });
       }
+      return newProjectId;
     },
   }))
 );
