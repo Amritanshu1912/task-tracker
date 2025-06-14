@@ -171,7 +171,7 @@ export default function TaskTrackerPage() {
               ) : showActiveProjectEmptyState && !showNoMatchFilterState ? (
                 <EmptyStateCard />
               ) : showTasksList ? (
-                <div className="space-y-8">
+                <div className="flex flex-col gap-4">
                   {/* Suspense boundary for potential future async TaskItem loading. */}
                   <Suspense fallback={<LoadingFallback />}>
                     {tasksToDisplay.map((task, index) => (
