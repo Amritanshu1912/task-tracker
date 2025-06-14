@@ -4,14 +4,15 @@ import { subscribeWithSelector } from "zustand/middleware";
 import type { TaskStore, Project, Task, RawTaskData, LabelObject } from "@/lib/types";
 import { throttle } from "lodash-es";
 import { toast } from "sonner";
-
 import {
   convertRawToFullTask,
   updateTaskInTree,
   addSubtaskToParentTree,
   deleteTaskFromTree,
   addLabelToTaskInTree,
-  calculateStats, getNextDefaultProjectName, removeLabelFromTasksRecursive
+  calculateStats,
+  getNextDefaultProjectName,
+  removeLabelFromTasksRecursive
 } from "./task-utils";
 import { DEFAULT_LABEL_DEFINITIONS } from "./labels";
 
@@ -35,7 +36,7 @@ export const useTaskStore = create<TaskStore>()(
     visibilityActionTrigger: 0,
     // --- ADD THIS LINE ---
     isAddTaskDialogOpen: false,
-
+    addTaskDialogPayload: null,
 
     // --- Project Actions ---
     addProject: (defaultName?: string) => {
@@ -191,14 +192,14 @@ export const useTaskStore = create<TaskStore>()(
     },
 
     // Actions for "Add Task to Project" Dialog
-    openAddTaskDialog: () => {
+    openAddTaskDialog: (payload) => {
       if (!get().activeProjectId) {
         toast.error("No active project", { description: "Select or create a project first to add tasks." });
         return;
       }
-      set({ isAddTaskDialogOpen: true });
+      set({ isAddTaskDialogOpen: true, addTaskDialogPayload: payload || null });
     },
-    closeAddTaskDialog: () => set({ isAddTaskDialogOpen: false }),
+    closeAddTaskDialog: () => set({ isAddTaskDialogOpen: false, addTaskDialogPayload: null }),
 
     // --- ADD Label Management Actions ---
     openManageLabelsDialog: () => set({ isManageLabelsDialogOpen: true }),
@@ -397,6 +398,8 @@ export const useTaskStore = create<TaskStore>()(
       }
     },
     dangerouslyOverwriteState: (importedData: { projectName?: string; tasks: RawTaskData[] }) => {
+      let newProjectId: string | undefined = undefined;
+
       if (importedData && Array.isArray(importedData.tasks)) {
         set({ _isInitializing_internal: true });
         const newProjectName = importedData.projectName || getNextDefaultProjectName(get().projects);
@@ -407,15 +410,17 @@ export const useTaskStore = create<TaskStore>()(
           tasks: importedData.tasks.map(convertRawToFullTask),
         };
 
+        newProjectId = newProject.id; // Capture the new ID
+
         set((state) => ({
           projects: [...state.projects, newProject],
           _isInitializing_internal: false,
         }));
-        toast.success("Project Imported", { description: `Project "${newProject.name}" has been added.` });
       } else {
         console.error("dangerouslyOverwriteState (import project): Invalid data provided.", importedData);
         toast.error("Import Error", { description: "Cannot import project due to invalid data structure." });
       }
+      return newProjectId;
     },
   }))
 );

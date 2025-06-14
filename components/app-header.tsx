@@ -4,18 +4,9 @@
 
 import { useMemo } from "react";
 import { useTaskStore } from "@/lib/store";
-import { shallow } from "zustand/shallow";
 import type { TaskStore as TaskStoreType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import {
-  Zap,
-  Plus, // Changed from PlusCircle for the button text variant
-  CheckCircle,
-  ListTodo,
-  Target, // Using Target for Progress % icon as in old sidebar stats
-  Settings, // Placeholder for potential future settings dropdown
-  Circle,
-} from "lucide-react";
+import { Zap, Plus, CheckCircle, Target, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Reusable StatItem component for the header
@@ -59,7 +50,8 @@ export function AppHeader() {
 
   const handleAddTaskToProject = () => {
     if (activeProject) {
-      openAddTaskDialog();
+      const newRootTaskNumber = (activeProject.tasks.length + 1).toString();
+      openAddTaskDialog({ taskNumber: newRootTaskNumber });
     } else {
       useTaskStore.getState().openAddTaskDialog();
     }
@@ -88,15 +80,12 @@ export function AppHeader() {
         {/* Center Section: Active Project Name & Add Task Button */}
         <div className="flex-1 flex items-center justify-center min-w-0 px-2 sm:px-4">
           {activeProject ? (
-            <>
-              <span>Project- </span>
-              <h2
-                className="text-base sm:text-lg font-semibold truncate text-foreground max-w-[150px] sm:max-w-[250px] md:max-w-xs lg:max-w-sm xl:max-w-md"
-                title={activeProject.name}
-              >
-                {activeProject.name}
-              </h2>
-            </>
+            <h2
+              className="text-base sm:text-lg font-semibold truncate text-foreground max-w-[150px] sm:max-w-[250px] md:max-w-xs lg:max-w-sm xl:max-w-md"
+              title={activeProject.name}
+            >
+              {activeProject.name}
+            </h2>
           ) : (
             <p className="text-base sm:text-lg italic text-muted-foreground">
               No Project Selected

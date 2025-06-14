@@ -15,21 +15,24 @@ import {
   Save,
   FileDown,
   FileUp,
-  DatabaseZap,
   ChevronDown,
   ChevronRight,
-  Tags, // New icon for Labels or Settings
-  Settings2, // Alternative for Settings
+  Tags,
+  Settings2,
+  Layers,
+  Plus,
 } from "lucide-react";
 import { useTaskStore } from "@/lib/store";
 import type { TaskStore as TaskStoreType } from "@/lib/types";
 import { SidebarFilterControls } from "./sidebar-filter-controls";
 import type { SidebarButton as SidebarButtonType } from "../app-sidebar";
-import { SidebarSectionProject } from "./sidebar-section-project";
+
 import { exportToJson, importFromJson } from "@/lib/utils";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import { ManageLabelsDialog } from "../manage-labels-dialog";
+import { SidebarProjectList } from "./sidebar-project-list";
+import { Button } from "../ui/button";
 
 interface SidebarMainContentProps {
   isSidebarOpen: boolean;
@@ -43,14 +46,12 @@ interface SidebarSectionProps {
   isSidebarOpen: boolean;
   defaultOpen?: boolean;
   SidebarButtonComponent: typeof SidebarButtonType;
+  headerAction?: React.ReactNode;
   className?: string;
   contentClassName?: string;
+  collapsedContent?: React.ReactNode; // ADD this new prop
 }
 
-/**
- * Renders a collapsible section within the sidebar.
- * When the sidebar is collapsed, it attempts to show a representative button or icon.
- */
 const SidebarSection = ({
   title,
   icon: Icon,
@@ -58,30 +59,34 @@ const SidebarSection = ({
   isSidebarOpen,
   defaultOpen = true,
   SidebarButtonComponent,
+  headerAction,
   className,
   contentClassName,
+  collapsedContent, // Destructure the new prop
 }: SidebarSectionProps) => {
   const [isSectionContentVisible, setIsSectionContentVisible] =
     useState(defaultOpen);
 
-  // Handles toggling the visibility of the section content
   const handleToggleCollapse = useCallback(() => {
-    // Only allow toggling if the sidebar is open and the section has a title
     if (isSidebarOpen && title) {
       setIsSectionContentVisible((prev) => !prev);
     }
   }, [isSidebarOpen, title]);
 
-  // Render a collapsed state when the main sidebar is closed
   if (!isSidebarOpen) {
-    // Find the first SidebarButton child to display when collapsed
+    if (collapsedContent) {
+      return (
+        <div className="flex flex-col items-center justify-center space-y-2">
+          {collapsedContent}
+        </div>
+      );
+    }
     const firstButtonChild = React.Children.toArray(children).find(
       (child) =>
         React.isValidElement(child) && child.type === SidebarButtonComponent
     );
 
     if (Icon && title) {
-      // If the section has a title and icon, display that icon as a button
       return (
         <div
           className={cn(
@@ -91,15 +96,14 @@ const SidebarSection = ({
         >
           <SidebarButtonComponent
             icon={Icon}
-            label="" // Label is empty as only icon is shown
-            onClick={() => useTaskStore.getState().toggleSidebar()} // Click to open sidebar
+            label=""
+            onClick={() => useTaskStore.getState().toggleSidebar()}
             isSidebarOpen={false}
-            tooltip={title} // Tooltip provides context
+            tooltip={title}
           />
         </div>
       );
     } else if (firstButtonChild && React.isValidElement(firstButtonChild)) {
-      // If no icon/title, render the first SidebarButton child (adapted for collapsed state)
       return (
         <div
           className={cn(
@@ -108,23 +112,21 @@ const SidebarSection = ({
           )}
         >
           {React.cloneElement(firstButtonChild as React.ReactElement<any>, {
-            isSidebarOpen: false, // Ensure the cloned button is also in collapsed state
+            isSidebarOpen: false,
           })}
         </div>
       );
     }
-    return null; // Don't render anything if no appropriate collapsed representation
+    return null;
   }
 
-  // Render expanded section when the sidebar is open
   return (
     <div
       className={cn("space-y-1", isSidebarOpen ? "mb-1" : "mb-2", className)}
     >
-      {/* Section header with title and collapse toggle */}
       {isSidebarOpen && title && (
         <div
-          className="flex items-center justify-between gap-2 h-7 mb-1 cursor-pointer group rounded-md hover:bg-accent/50 px-1 -mx-1"
+          className="flex items-center justify-between gap-2 h-10 mb-1 cursor-pointer group rounded-md hover:bg-accent/50 px-1 -mx-1"
           onClick={handleToggleCollapse}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -145,15 +147,18 @@ const SidebarSection = ({
               {title}
             </h3>
           </div>
-          {isSectionContentVisible ? (
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-accent-foreground transition-colors" />
-          ) : (
-            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-accent-foreground transition-colors" />
-          )}
+          {/* --- NEW: Render area for the header action and chevron --- */}
+          <div className="flex items-center">
+            {headerAction}
+            {isSectionContentVisible ? (
+              <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-accent-foreground transition-colors" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-accent-foreground transition-colors" />
+            )}
+          </div>
         </div>
       )}
 
-      {/* Animated content area for the section */}
       {isSidebarOpen && (
         <AnimatePresence initial={false}>
           {isSectionContentVisible && (
@@ -195,14 +200,17 @@ const SidebarSection = ({
   );
 };
 
-/**
- * Main content area of the sidebar, containing various sections like projects, filters, and data management.
- */
 export function SidebarMainContent({
   isSidebarOpen,
   SidebarButtonComponent,
 }: SidebarMainContentProps) {
-  // Select only the necessary state and actions from the store for optimal re-renders.
+  const addProject = useTaskStore((state: TaskStoreType) => state.addProject);
+  const toggleSidebar = useTaskStore(
+    (state: TaskStoreType) => state.toggleSidebar
+  );
+  const projectsCount = useTaskStore(
+    (state: TaskStoreType) => state.projects.length
+  );
   const toggleAllNotes = useTaskStore(
     (state: TaskStoreType) => state.toggleAllNotes
   );
@@ -223,7 +231,6 @@ export function SidebarMainContent({
     (state: TaskStoreType) => state.openManageLabelsDialog
   );
 
-  // Callback to handle saving progress to local storage.
   const handleSave = useCallback(() => {
     saveToLocalStorage();
     toast.success("Progress Saved", {
@@ -231,7 +238,6 @@ export function SidebarMainContent({
     });
   }, [saveToLocalStorage]);
 
-  // Callback to handle exporting the active project's data.
   const handleExport = useCallback(() => {
     const activeProject = projects.find((p) => p.id === activeProjectId);
     if (!activeProject) {
@@ -249,7 +255,6 @@ export function SidebarMainContent({
     });
   }, [projects, activeProjectId]);
 
-  // Callback to handle importing project data from a JSON file.
   const handleImport = useCallback(() => {
     const input = document.createElement("input");
     input.type = "file";
@@ -258,15 +263,21 @@ export function SidebarMainContent({
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         try {
-          await importFromJson(file); // Utility handles the state update and toasts internally
+          await importFromJson(file);
         } catch (error) {
-          // Error handling for import initiation (e.g., user cancels file dialog)
           console.error("Import initiation failed or was rejected:", error);
         }
       }
     };
     input.click();
   }, []);
+
+  const handleAddProjectAndExpand = () => {
+    addProject();
+    if (!isSidebarOpen) {
+      toggleSidebar();
+    }
+  };
 
   return (
     <>
@@ -276,40 +287,55 @@ export function SidebarMainContent({
           isSidebarOpen ? "px-3 pt-2 pb-4 space-y-2" : "px-2 py-2 space-y-2"
         )}
       >
-        <SidebarSectionProject
+        {/* --- MODIFIED: Replaced SidebarSectionProject with the generic SidebarSection --- */}
+        <SidebarSection
+          title={`Projects (${projectsCount})`}
+          icon={Layers}
           isSidebarOpen={isSidebarOpen}
           SidebarButtonComponent={SidebarButtonComponent}
-        />
+          headerAction={
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent the section from collapsing
+                addProject();
+              }}
+              className="h-6 w-6 mr-1 text-muted-foreground hover:bg-accent/80 hover:text-primary"
+              title="Add New Project"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          }
+          // --- NEW: Added contentClassName for better control ---
+          contentClassName={cn(isSidebarOpen && "min-h-[50px]")}
+          collapsedContent={
+            <SidebarButtonComponent
+              icon={Plus}
+              label=""
+              onClick={handleAddProjectAndExpand}
+              isSidebarOpen={false}
+              tooltip="Add New Project"
+            />
+          }
+        >
+          {isSidebarOpen ? ( // Only render the list if sidebar is open
+            <SidebarProjectList isSidebarOpen={isSidebarOpen} />
+          ) : null}
+        </SidebarSection>
 
-        {isSidebarOpen && <Separator className="my-3" />}
+        <Separator className="my-3" />
 
+        {/* --- Filters Section (from previous step, no changes here) --- */}
         <SidebarSection
           title="Filters"
           icon={FilterIcon}
           isSidebarOpen={isSidebarOpen}
           defaultOpen={true}
           SidebarButtonComponent={SidebarButtonComponent}
+          collapsedContent={null} // Explicitly render nothing when collapsed
         >
           <SidebarFilterControls isSidebarOpen={isSidebarOpen} />
-        </SidebarSection>
-
-        {isSidebarOpen && <Separator className="my-3" />}
-
-        <SidebarSection
-          title="Workspace"
-          icon={Settings2} // Or Tags, or a cog icon
-          isSidebarOpen={isSidebarOpen}
-          defaultOpen={false}
-          SidebarButtonComponent={SidebarButtonComponent}
-        >
-          <SidebarButtonComponent
-            icon={Tags} // Icon for managing labels
-            label="Manage Labels"
-            onClick={openManageLabelsDialog}
-            isSidebarOpen={isSidebarOpen}
-            tooltip="Manage Custom Labels"
-          />
-          {/* Future settings can go here */}
         </SidebarSection>
 
         {isSidebarOpen && <Separator className="my-3" />}
@@ -318,8 +344,49 @@ export function SidebarMainContent({
           title="View Controls"
           icon={Eye}
           isSidebarOpen={isSidebarOpen}
-          defaultOpen={false} // Default to closed for less clutter
+          defaultOpen={false}
           SidebarButtonComponent={SidebarButtonComponent}
+          collapsedContent={
+            <>
+              <SidebarButtonComponent
+                icon={areAllNotesCollapsed ? Eye : EyeOff}
+                label=""
+                onClick={toggleAllNotes}
+                isSidebarOpen={false}
+                tooltip={
+                  areAllNotesCollapsed ? "Show All Notes" : "Hide All Notes"
+                }
+              />
+              <SidebarButtonComponent
+                icon={ChevronsUpDown}
+                label=""
+                onClick={() => setMaxVisibleDepth(null)}
+                isSidebarOpen={false}
+                tooltip="Expand All Tasks"
+              />
+              <SidebarButtonComponent
+                icon={LayoutList}
+                label=""
+                onClick={() => setMaxVisibleDepth(0)}
+                isSidebarOpen={false}
+                tooltip="Collapse to Level 1"
+              />
+              <SidebarButtonComponent
+                icon={Layers2}
+                label=""
+                onClick={() => setMaxVisibleDepth(1)}
+                isSidebarOpen={false}
+                tooltip="Collapse to Level 2"
+              />
+              <SidebarButtonComponent
+                icon={Layers3}
+                label=""
+                onClick={() => setMaxVisibleDepth(2)}
+                isSidebarOpen={false}
+                tooltip="Collapse to Level 3"
+              />
+            </>
+          }
         >
           <SidebarButtonComponent
             icon={areAllNotesCollapsed ? Eye : EyeOff}
@@ -358,15 +425,54 @@ export function SidebarMainContent({
           />
         </SidebarSection>
 
-        {isSidebarOpen && <Separator className="my-3" />}
+        <Separator className="my-3" />
 
         <SidebarSection
-          title="Data Management"
-          icon={DatabaseZap}
+          title="Workspace Controls"
+          icon={Settings2}
           isSidebarOpen={isSidebarOpen}
-          defaultOpen={false} // Default to closed
+          defaultOpen={false}
           SidebarButtonComponent={SidebarButtonComponent}
+          collapsedContent={
+            <>
+              <SidebarButtonComponent
+                icon={Tags}
+                label=""
+                onClick={openManageLabelsDialog}
+                isSidebarOpen={false}
+                tooltip="Manage Custom Labels"
+              />
+              <SidebarButtonComponent
+                icon={Save}
+                label=""
+                onClick={handleSave}
+                isSidebarOpen={false}
+                tooltip="Save Current State"
+              />
+              <SidebarButtonComponent
+                icon={FileDown}
+                label=""
+                onClick={handleExport}
+                isSidebarOpen={false}
+                tooltip="Export Active Project"
+              />
+              <SidebarButtonComponent
+                icon={FileUp}
+                label=""
+                onClick={handleImport}
+                isSidebarOpen={false}
+                tooltip="Import Project"
+              />
+            </>
+          }
         >
+          <SidebarButtonComponent
+            icon={Tags}
+            label="Manage Labels"
+            onClick={openManageLabelsDialog}
+            isSidebarOpen={isSidebarOpen}
+            tooltip="Manage Custom Labels"
+          />
           <SidebarButtonComponent
             icon={Save}
             label="Save Progress"
@@ -390,7 +496,6 @@ export function SidebarMainContent({
           />
         </SidebarSection>
       </div>
-      {/* --- ADD ManageLabelsDialog rendering --- */}
       <ManageLabelsDialog />
     </>
   );

@@ -123,6 +123,12 @@
   }
 }
 
+@layer utilities {
+  .focus-visible-ring {
+    @apply focus-visible:outline-none focus-visible:ring-primary/60 focus-visible:ring-offset-background;
+  }
+}
+
 /* Task-specific styles */
 .task-item {
   @apply transition-all duration-200 ease-out;

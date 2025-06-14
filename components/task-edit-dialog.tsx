@@ -31,6 +31,7 @@ interface TaskEditDialogProps {
   task?: Task | null;
   parentId?: string; // For subtasks
   mode: "edit" | "createSubtask" | "createRootTask"; // createRootTask now means root for active project
+  taskNumber?: string; // ADD this prop
 }
 
 /**
@@ -43,6 +44,7 @@ export function TaskEditDialog({
   task,
   parentId,
   mode,
+  taskNumber,
 }: TaskEditDialogProps) {
   // Local state for form fields
   const [title, setTitle] = useState("");
@@ -161,7 +163,7 @@ export function TaskEditDialog({
     onOpenChange,
     storeUpdateTask,
     storeAddTask,
-    activeProjectId, // --- ADD activeProjectId to dependencies ---
+    activeProjectId,
   ]);
 
   return (
@@ -170,6 +172,11 @@ export function TaskEditDialog({
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">
             {dialogTitleText}
+            {taskNumber && (
+              <span className="ml-2 text-base font-normal text-muted-foreground">
+                ({taskNumber})
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
         <form
@@ -221,18 +228,31 @@ export function TaskEditDialog({
                       return (
                         <Badge
                           key={label.id}
-                          variant={isSelected ? "default" : "outline"} // Use "default" for selected
                           className={cn(
-                            "cursor-pointer transition-all duration-150 px-2.5 py-1 text-xs font-semibold rounded-full border",
-                            isSelected && label.color && "text-white", // Ensure contrast if color is dark
-                            !isSelected &&
-                              "hover:bg-accent hover:text-accent-foreground"
+                            "cursor-pointer transition-all duration-150 px-2.5 py-1 text-xs font-semibold rounded-full border-2", // Use border-2 for a slightly thicker, more visible border
+                            "focus-visible-ring", // APPLY our new custom focus style
+                            isSelected
+                              ? "text-white" // High-contrast text for selected state
+                              : "hover:opacity-80", // Simple hover effect for unselected
+                            // If no color, fall back to default selected/unselected styles
+                            !label.color &&
+                              (isSelected
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "border-border")
                           )}
                           style={
-                            isSelected && label.color
+                            label.color
                               ? {
-                                  backgroundColor: `${label.color}30`, // Very light background
-                                  borderColor: label.color,
+                                  // SELECTED STATE: Opaque background, solid border
+                                  backgroundColor: isSelected
+                                    ? `${label.color}80`
+                                    : `${label.color}20`,
+                                  borderColor: isSelected
+                                    ? label.color
+                                    : `${label.color}80`,
+                                  color: isSelected
+                                    ? "#fff"
+                                    : `${label.color}95`,
                                 }
                               : {}
                           }

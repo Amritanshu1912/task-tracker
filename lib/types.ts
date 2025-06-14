@@ -32,7 +32,7 @@ export interface LabelObject {
 export interface TaskStore {
   projects: Project[];
   activeProjectId: string | null;
-  editingProjectId: string | null; // For inline project name editing
+  editingProjectId: string | null;
 
   customLabels: LabelObject[];
   isManageLabelsDialogOpen: boolean;
@@ -62,7 +62,8 @@ export interface TaskStore {
 
   // State for "Add Task to Project" dialog (triggered from AppHeader)
   isAddTaskDialogOpen: boolean;
-  openAddTaskDialog: () => void;
+  addTaskDialogPayload: { taskNumber?: string } | null; // ADD this line
+  openAddTaskDialog: (payload?: { taskNumber?: string }) => void; // MODIFY this line
   closeAddTaskDialog: () => void;
 
   // --- ADD Label Management Actions ---
@@ -92,7 +93,7 @@ export interface TaskStore {
   // Persistence and Data
   loadInitialData: () => void;
   saveToLocalStorage: () => void;
-  dangerouslyOverwriteState: (importedData: { projectName?: string; tasks: RawTaskData[] }) => void;
+  dangerouslyOverwriteState: (importedData: { projectName?: string; tasks: RawTaskData[] }) => string | undefined;
 }
 
 // RawTaskData is used for initial data loading and import/export

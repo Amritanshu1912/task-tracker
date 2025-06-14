@@ -11,30 +11,50 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// NEW: Helper function to create the standardized project filename
+function createProjectExportFilename(projectName: string): string {
+  const now = new Date();
+
+  // Format date as DD-MM-YYYY
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+  const year = now.getFullYear();
+  const date = `${day}-${month}-${year}`;
+
+  // Format time as HH-mm-ss
+  const time = [
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds(),
+  ]
+    .map((n) => String(n).padStart(2, '0'))
+    .join('-');
+
+  // Sanitize project name (replace spaces with hyphens and remove invalid characters)
+  const sanitizedName = projectName
+    .replace(/\s+/g, '-')
+    .replace(/[\/\\?%*:|"<>]/g, '');
+
+  return `${sanitizedName}-Data-${date}_${time}.json`;
+}
+
 /**
  * Downloads given data as a timestamped JSON file.
  */
-export function exportToJson<T = unknown>(data: T) {
+export function exportToJson(
+  data: { projectName: string; tasks: unknown[] }, // Expect data to include projectName
+) {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
     type: "application/json",
   });
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  const now = new Date();
 
-  const date = now.toISOString().split("T")[0]; // YYYY-MM-DD
-  const time = [
-    now.getHours(),
-    now.getMinutes(),
-    now.getSeconds(),
-  ]
-    .map((n) => String(n).padStart(2, "0"))
-    .join("-");
+  // Generate the filename using our new centralized helper function
+  a.download = createProjectExportFilename(data.projectName);
 
   a.href = url;
-  a.download = `task-data-${date}_${time}.json`;
-
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -59,18 +79,24 @@ export function importFromJson<T = unknown>(file: File): Promise<T> {
           reject(new Error("File content is empty."));
           return;
         }
-        const jsonData = JSON.parse(event.target.result as string) as any; // Use 'any' for initial parse
+        const jsonData = JSON.parse(event.target.result as string) as any;
 
         // Validate the structure expected by dangerouslyOverwriteState
         if (jsonData && Array.isArray(jsonData.tasks)) {
-          // Instead of writing to localStorage here and reloading,
-          // directly update the store state.
-          storeActions.dangerouslyOverwriteState(jsonData);
 
-          toast.success("Import Successful", {
-            description: "Data has been imported and applied.",
-            duration: 3000,
-          });
+          const newProjectId = storeActions.dangerouslyOverwriteState(jsonData);
+          // If the import was successful and we have a new ID, switch to it
+          if (newProjectId) {
+            storeActions.setActiveProject(newProjectId);
+            toast.success("Import Successful", {
+              description: `Project "${jsonData.projectName || 'Untitled'}" imported and is now active.`,
+              duration: 3000,
+            });
+          } else {
+            // This case handles if dangerouslyOverwriteState failed internally
+            toast.error("Import Failed", { description: "Could not add the project to your workspace." });
+          }
+
           // NO window.location.reload();
           storeActions.resumeAutoSave(true); // Resume and trigger a save of the newly imported state
           resolve(jsonData as T);

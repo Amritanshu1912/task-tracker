@@ -13,10 +13,11 @@ import {
   ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { Edit3, Trash2, Download } from "lucide-react";
+import { Edit2, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { exportToJson, cn } from "@/lib/utils";
 import type { Project, TaskStore as TaskStoreType } from "@/lib/types";
+import { Button } from "../ui/button";
 
 interface SidebarProjectListProps {
   isSidebarOpen: boolean;
@@ -25,7 +26,6 @@ interface SidebarProjectListProps {
 export function SidebarProjectList({ isSidebarOpen }: SidebarProjectListProps) {
   const projects = useTaskStore((state) => state.projects);
 
-  // When sidebar is collapsed, list is hidden
   if (!isSidebarOpen) return null;
 
   if (projects.length === 0) {
@@ -54,6 +54,7 @@ interface SidebarProjectItemProps {
 }
 
 function SidebarProjectItem({ project }: SidebarProjectItemProps) {
+  // Zustand Store Selectors
   const activeProjectId = useTaskStore(
     (state: TaskStoreType) => state.activeProjectId
   );
@@ -73,56 +74,41 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
     (state: TaskStoreType) => state.setEditingProjectId
   );
 
+  // Derived State
   const isActive = project.id === activeProjectId;
   const isEditing = project.id === editingProjectId;
 
+  // Local Component State
   const [currentName, setCurrentName] = useState(project.name);
-  const inputRef = useRef<HTMLInputElement>(null);
-  // triggerRef is not used in the provided snippet, can be removed if not needed elsewhere
-  // const triggerRef = useRef<HTMLDivElement>(null);
-  const isEditingFromContextMenuRef = useRef(false);
-  const contextMenuOpenRef = useRef(false);
-
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
-  useEffect(() => {
-    if (!isEditing || project.id !== editingProjectId) {
-      setCurrentName(project.name);
-      isEditingFromContextMenuRef.current = false;
+  // Refs
+  const inputRef = useRef<HTMLInputElement>(null);
+  const contextMenuOpenRef = useRef(false);
+
+  // Callbacks and Effects
+  const focusInput = useCallback(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
     }
-  }, [project.name, isEditing, editingProjectId, project.id]);
+  }, []);
 
+  // Effect to reset currentName when editing stops or another project is edited
   useEffect(() => {
-    if (isEditing && project.id === editingProjectId) {
+    if (project.id !== editingProjectId) {
       setCurrentName(project.name);
-
-      const focusInput = () => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-          inputRef.current.select();
-        }
-      };
-
-      if (isEditingFromContextMenuRef.current) {
-        const timeouts: NodeJS.Timeout[] = [];
-        [10, 50, 100, 200].forEach((delay) => {
-          // Keep your multi-attempt focus
-          timeouts.push(setTimeout(focusInput, delay));
-        });
-        const rafId = requestAnimationFrame(() => {
-          setTimeout(focusInput, 0);
-        });
-        return () => {
-          timeouts.forEach(clearTimeout);
-          cancelAnimationFrame(rafId);
-        };
-      } else {
-        const timer = setTimeout(focusInput, 0);
-        return () => clearTimeout(timer);
-      }
     }
-  }, [isEditing, editingProjectId, project.id, project.name]);
+  }, [project.name, project.id, editingProjectId]);
+
+  // Effect to focus input when editing starts
+  useEffect(() => {
+    if (isEditing) {
+      const timer = setTimeout(focusInput, 10);
+      return () => clearTimeout(timer);
+    }
+  }, [isEditing, focusInput]);
 
   const commitName = useCallback(() => {
     if (!isEditing) return;
@@ -134,7 +120,6 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
       updateProjectName(project.id, trimmedName);
     }
     setEditingProjectId(null);
-    isEditingFromContextMenuRef.current = false;
   }, [
     currentName,
     project.name,
@@ -147,7 +132,6 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
   const cancelEdit = useCallback(() => {
     setCurrentName(project.name);
     setEditingProjectId(null);
-    isEditingFromContextMenuRef.current = false;
   }, [project.name, setEditingProjectId]);
 
   const handleInputKeyDown = useCallback(
@@ -163,74 +147,28 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
     [commitName, cancelEdit]
   );
 
-  const handleInputBlur = useCallback(
-    // (e: React.FocusEvent<HTMLInputElement>) => { // e is not used
-    () => {
-      // Removed unused 'e' parameter
-      if (contextMenuOpenRef.current) {
-        return;
-      }
-      if (isEditingFromContextMenuRef.current) {
-        setTimeout(() => {
-          if (useTaskStore.getState().editingProjectId === project.id) {
-            if (document.activeElement !== inputRef.current) {
-              commitName();
-            }
-          }
-        }, 100);
-      } else {
-        if (useTaskStore.getState().editingProjectId === project.id) {
-          commitName();
-        }
-      }
-    },
-    [commitName, project.id] // Removed e from dependencies
-  );
+  const handleInputBlur = useCallback(() => {
+    if (isEditing) commitName();
+  }, [commitName, isEditing]);
 
-  const startRename = useCallback(
-    (fromContextMenu: boolean = true) => {
-      // Added optional flag
-      isEditingFromContextMenuRef.current = fromContextMenu;
-      setEditingProjectId(project.id);
-    },
-    [project.id, setEditingProjectId]
-  );
+  const startRename = useCallback(() => {
+    if (isEditing) return; // Defensive guard
+    setEditingProjectId(project.id);
+  }, [project.id, setEditingProjectId, isEditing]);
 
-  const handleContextMenuOpenChange = useCallback(
-    (open: boolean) => {
-      contextMenuOpenRef.current = open;
-      if (!open && isEditingFromContextMenuRef.current && isEditing) {
-        // Check isEditing also
-        setTimeout(() => {
-          if (
-            inputRef.current &&
-            useTaskStore.getState().editingProjectId === project.id
-          ) {
-            // Double check editing state
-            inputRef.current.focus();
-            inputRef.current.select();
-          }
-        }, 50);
-      }
-    },
-    [isEditing, project.id] // Added project.id to dependencies
-  );
+  const handleContextMenuOpenChange = useCallback((open: boolean) => {
+    contextMenuOpenRef.current = open;
+  }, []);
 
   const handleItemKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "F2" && !isEditing) {
         e.preventDefault();
-        startRename(false); // Indicate F2 trigger
+        startRename();
       }
     },
-    [isEditing, startRename] // Use startRename from useCallback
+    [isEditing, startRename]
   );
-
-  const handleItemDoubleClick = useCallback(() => {
-    if (!isEditing) {
-      startRename(false); // Indicate double-click trigger
-    }
-  }, [isEditing, startRename]); // Use startRename from useCallback
 
   const handleItemClick = useCallback(() => {
     if (!isEditing) {
@@ -245,7 +183,7 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
 
   const handleConfirmDelete = useCallback(() => {
     if (projectToDelete) {
-      deleteProject(projectToDelete.id); // Zustand store action
+      deleteProject(projectToDelete.id);
       toast.success(`Deleted project "${projectToDelete.name}"`);
       setProjectToDelete(null);
     }
@@ -267,22 +205,26 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
   return (
     <>
       <ContextMenu onOpenChange={handleContextMenuOpenChange}>
-        <ContextMenuTrigger disabled={isEditing} asChild>
+        <ContextMenuTrigger
+          disabled={isEditing}
+          asChild
+          onFocus={(e) => isEditing && e.stopPropagation()}
+        >
+          {/* --- MODIFIED: Added `group` for hover effects --- */}
           <div
             className={cn(
-              "flex items-center w-full h-9 px-3 gap-3 rounded-sm cursor-pointer group relative", // Standard item height & padding
+              "flex items-center w-full h-9 px-3 gap-3 rounded-sm cursor-pointer group relative",
               "transition-colors duration-150 ease-in-out",
               isActive &&
                 !isEditing &&
-                "bg-accent text-accent-foreground font-medium", // Active state style
+                "bg-accent text-accent-foreground font-medium",
               !isActive &&
                 !isEditing &&
-                "text-muted-foreground hover:bg-accent hover:text-accent-foreground", // Default & hover
-              isEditing && "bg-muted ring-1 ring-primary/50" // Visual cue for editing the whole item
+                "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              isEditing && "bg-muted ring-1 ring-primary/50"
             )}
             onClick={handleItemClick}
             onKeyDown={handleItemKeyDown}
-            onDoubleClick={handleItemDoubleClick}
             tabIndex={0} // Always tabbable if not editing (input will be tabbable when editing)
             aria-current={isActive ? "page" : undefined}
             title={
@@ -297,30 +239,60 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
                 value={currentName}
                 onChange={(e) => setCurrentName(e.target.value)}
                 onKeyDown={handleInputKeyDown}
-                onBlur={handleInputBlur}
+                onBlur={(e) => {
+                  if (!contextMenuOpenRef.current) {
+                    handleInputBlur();
+                  }
+                }}
                 onClick={(e) => e.stopPropagation()}
-                // --- STYLES MODIFIED BELOW for the input ---
                 className={cn(
-                  "flex-1 bg-transparent outline-none p-0 m-0 text-sm font-medium w-full", // Ensure it takes full width within flex
-                  "border-none ring-0 focus:ring-0", // Remove default input borders/rings
-                  "text-foreground placeholder:text-muted-foreground" // Match text color
+                  "flex-1 bg-transparent outline-none p-0 m-0 text-sm font-medium w-full",
+                  "border-none ring-0 focus:ring-0 focus:outline-none",
+                  "text-foreground placeholder:text-muted-foreground"
                 )}
-                // autoFocus // autoFocus can sometimes interfere with programmatic focus, rely on useEffect
+                // autoFocus
               />
             ) : (
-              // --- STYLES MODIFIED BELOW for the span ---
-              <span
-                className={cn(
-                  "flex-1 truncate text-sm min-w-0", // min-w-0 for proper truncation in flex
-                  isActive
-                    ? "font-medium text-accent-foreground"
-                    : "font-normal"
-                )}
-              >
-                {project.name}
-              </span>
+              <>
+                <span
+                  className={cn(
+                    "flex-1 truncate text-sm min-w-0",
+                    isActive
+                      ? "font-medium text-accent-foreground"
+                      : "font-normal"
+                  )}
+                >
+                  {project.name}
+                </span>
+                {/* --- NEW: Hover-to-show action icons --- */}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-100">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground/50 hover:text-muted-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startRename();
+                    }}
+                    title="Rename project"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive/50 hover:text-destructive/80"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteInitiate(project);
+                    }}
+                    title="Delete project"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </>
             )}
-            {/* Active project indicator - vertical bar on the left */}
             {!isEditing && isActive && (
               <div className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 bg-primary rounded-r-full"></div>
             )}
@@ -328,25 +300,20 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
         </ContextMenuTrigger>
         <ContextMenuContent
           className="w-52"
-          onClick={(e) => e.stopPropagation()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
         >
-          <ContextMenuItem
-            onSelect={() => startRename(true)}
-            disabled={isEditing}
-          >
-            {/* Pass true for context menu trigger */}
-            <Edit3 className="mr-2 h-4 w-4" />
+          <ContextMenuItem onSelect={startRename} disabled={isEditing}>
+            <Edit2 className="mr-2 h-4 w-4" />
             Rename Project
             <span className="ml-auto text-xs text-muted-foreground">F2</span>
           </ContextMenuItem>
-          {/* --- ADDED onSelect for export and delete --- */}
           <ContextMenuItem onSelect={handleExport} disabled={isEditing}>
             <Download className="mr-2 h-4 w-4" />
             Export Project
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
-            onSelect={() => handleDeleteInitiate(project)} // Pass the current project
+            onSelect={() => handleDeleteInitiate(project)}
             disabled={isEditing}
             className="text-destructive focus:text-destructive focus:bg-destructive/10"
           >
@@ -355,7 +322,7 @@ function SidebarProjectItem({ project }: SidebarProjectItemProps) {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-      {projectToDelete && ( // Conditionally render dialog
+      {projectToDelete && (
         <ConfirmationDialog
           isOpen={isDeleteConfirmOpen}
           onOpenChange={setIsDeleteConfirmOpen}

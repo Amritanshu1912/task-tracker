@@ -150,7 +150,7 @@ export default function TaskTrackerPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <AppHeader />
-      <div className="flex flex-1 pt-16">
+      <div className="flex flex-1 pt-0">
         <AppSidebar />
         <div
           className="flex-1 flex flex-col transition-all duration-300 ease-in-out"
@@ -164,11 +164,8 @@ export default function TaskTrackerPage() {
             <ProgressBar />
           </div>
 
-          <main
-            className="flex-1 overflow-y-auto"
-            style={{ paddingTop: "2.75rem" }}
-          >
-            <div className="container mx-auto py-8 px-4 max-w-6xl">
+          <main className="flex-1 overflow-y-auto pt-16">
+            <div className="container mx-auto pb-8 px-4 max-w-6xl">
               {showNoProjectsState ? (
                 <NoProjectsState />
               ) : showActiveProjectEmptyState && !showNoMatchFilterState ? (
