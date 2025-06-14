@@ -80,15 +80,12 @@ export function AppHeader() {
         {/* Center Section: Active Project Name & Add Task Button */}
         <div className="flex-1 flex items-center justify-center min-w-0 px-2 sm:px-4">
           {activeProject ? (
-            <>
-              <span>Project- </span>
-              <h2
-                className="text-base sm:text-lg font-semibold truncate text-foreground max-w-[150px] sm:max-w-[250px] md:max-w-xs lg:max-w-sm xl:max-w-md"
-                title={activeProject.name}
-              >
-                {activeProject.name}
-              </h2>
-            </>
+            <h2
+              className="text-base sm:text-lg font-semibold truncate text-foreground max-w-[150px] sm:max-w-[250px] md:max-w-xs lg:max-w-sm xl:max-w-md"
+              title={activeProject.name}
+            >
+              {activeProject.name}
+            </h2>
           ) : (
             <p className="text-base sm:text-lg italic text-muted-foreground">
               No Project Selected

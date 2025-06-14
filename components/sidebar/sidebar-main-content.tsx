@@ -49,6 +49,7 @@ interface SidebarSectionProps {
   headerAction?: React.ReactNode;
   className?: string;
   contentClassName?: string;
+  collapsedContent?: React.ReactNode; // ADD this new prop
 }
 
 const SidebarSection = ({
@@ -61,6 +62,7 @@ const SidebarSection = ({
   headerAction,
   className,
   contentClassName,
+  collapsedContent, // Destructure the new prop
 }: SidebarSectionProps) => {
   const [isSectionContentVisible, setIsSectionContentVisible] =
     useState(defaultOpen);
@@ -72,6 +74,13 @@ const SidebarSection = ({
   }, [isSidebarOpen, title]);
 
   if (!isSidebarOpen) {
+    if (collapsedContent) {
+      return (
+        <div className="flex flex-col items-center justify-center space-y-2">
+          {collapsedContent}
+        </div>
+      );
+    }
     const firstButtonChild = React.Children.toArray(children).find(
       (child) =>
         React.isValidElement(child) && child.type === SidebarButtonComponent
@@ -196,6 +205,9 @@ export function SidebarMainContent({
   SidebarButtonComponent,
 }: SidebarMainContentProps) {
   const addProject = useTaskStore((state: TaskStoreType) => state.addProject);
+  const toggleSidebar = useTaskStore(
+    (state: TaskStoreType) => state.toggleSidebar
+  );
   const projectsCount = useTaskStore(
     (state: TaskStoreType) => state.projects.length
   );
@@ -260,6 +272,13 @@ export function SidebarMainContent({
     input.click();
   }, []);
 
+  const handleAddProjectAndExpand = () => {
+    addProject();
+    if (!isSidebarOpen) {
+      toggleSidebar();
+    }
+  };
+
   return (
     <>
       <div
@@ -290,13 +309,22 @@ export function SidebarMainContent({
           }
           // --- NEW: Added contentClassName for better control ---
           contentClassName={cn(isSidebarOpen && "min-h-[50px]")}
+          collapsedContent={
+            <SidebarButtonComponent
+              icon={Plus}
+              label=""
+              onClick={handleAddProjectAndExpand}
+              isSidebarOpen={false}
+              tooltip="Add New Project"
+            />
+          }
         >
           {isSidebarOpen ? ( // Only render the list if sidebar is open
             <SidebarProjectList isSidebarOpen={isSidebarOpen} />
           ) : null}
         </SidebarSection>
 
-        {isSidebarOpen && <Separator className="my-3" />}
+        <Separator className="my-3" />
 
         {/* --- Filters Section (from previous step, no changes here) --- */}
         <SidebarSection
@@ -305,6 +333,7 @@ export function SidebarMainContent({
           isSidebarOpen={isSidebarOpen}
           defaultOpen={true}
           SidebarButtonComponent={SidebarButtonComponent}
+          collapsedContent={null} // Explicitly render nothing when collapsed
         >
           <SidebarFilterControls isSidebarOpen={isSidebarOpen} />
         </SidebarSection>
@@ -317,6 +346,47 @@ export function SidebarMainContent({
           isSidebarOpen={isSidebarOpen}
           defaultOpen={false}
           SidebarButtonComponent={SidebarButtonComponent}
+          collapsedContent={
+            <>
+              <SidebarButtonComponent
+                icon={areAllNotesCollapsed ? Eye : EyeOff}
+                label=""
+                onClick={toggleAllNotes}
+                isSidebarOpen={false}
+                tooltip={
+                  areAllNotesCollapsed ? "Show All Notes" : "Hide All Notes"
+                }
+              />
+              <SidebarButtonComponent
+                icon={ChevronsUpDown}
+                label=""
+                onClick={() => setMaxVisibleDepth(null)}
+                isSidebarOpen={false}
+                tooltip="Expand All Tasks"
+              />
+              <SidebarButtonComponent
+                icon={LayoutList}
+                label=""
+                onClick={() => setMaxVisibleDepth(0)}
+                isSidebarOpen={false}
+                tooltip="Collapse to Level 1"
+              />
+              <SidebarButtonComponent
+                icon={Layers2}
+                label=""
+                onClick={() => setMaxVisibleDepth(1)}
+                isSidebarOpen={false}
+                tooltip="Collapse to Level 2"
+              />
+              <SidebarButtonComponent
+                icon={Layers3}
+                label=""
+                onClick={() => setMaxVisibleDepth(2)}
+                isSidebarOpen={false}
+                tooltip="Collapse to Level 3"
+              />
+            </>
+          }
         >
           <SidebarButtonComponent
             icon={areAllNotesCollapsed ? Eye : EyeOff}
@@ -355,7 +425,7 @@ export function SidebarMainContent({
           />
         </SidebarSection>
 
-        {isSidebarOpen && <Separator className="my-3" />}
+        <Separator className="my-3" />
 
         <SidebarSection
           title="Workspace Controls"
@@ -363,6 +433,38 @@ export function SidebarMainContent({
           isSidebarOpen={isSidebarOpen}
           defaultOpen={false}
           SidebarButtonComponent={SidebarButtonComponent}
+          collapsedContent={
+            <>
+              <SidebarButtonComponent
+                icon={Tags}
+                label=""
+                onClick={openManageLabelsDialog}
+                isSidebarOpen={false}
+                tooltip="Manage Custom Labels"
+              />
+              <SidebarButtonComponent
+                icon={Save}
+                label=""
+                onClick={handleSave}
+                isSidebarOpen={false}
+                tooltip="Save Current State"
+              />
+              <SidebarButtonComponent
+                icon={FileDown}
+                label=""
+                onClick={handleExport}
+                isSidebarOpen={false}
+                tooltip="Export Active Project"
+              />
+              <SidebarButtonComponent
+                icon={FileUp}
+                label=""
+                onClick={handleImport}
+                isSidebarOpen={false}
+                tooltip="Import Project"
+              />
+            </>
+          }
         >
           <SidebarButtonComponent
             icon={Tags}
